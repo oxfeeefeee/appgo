@@ -1,0 +1,53 @@
+{
+	"ImportPath": "github.com/oxfeeefeee/appgo",
+	"GoVersion": "go1.6",
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.9.0-17-ga26f435",
+			"Rev": "a26f43589d737684363ff856c5a0f9f24b946510"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/negroni",
+			"Comment": "v0.1-70-gc7477ad",
+			"Rev": "c7477ad8e330bef55bf1ebe300cf8aa67c492d1b"
+		},
+		{
+			"ImportPath": "github.com/jinzhu/configor",
+			"Rev": "f740b0b16fc10bacdb09fc3fbac9048aa827e952"
+		},
+		{
+			"ImportPath": "github.com/jinzhu/gorm",
+			"Rev": "1819dda80ab0963da3ec38f484264c1cab543786"
+		},
+		{
+			"ImportPath": "github.com/jinzhu/inflection",
+			"Rev": "3272df6c21d04180007eb3349844c89a3856bc25"
+		},
+		{
+			"ImportPath": "github.com/meatballhat/negroni-logrus",
+			"Rev": "0456e765fdc169ebcb064ac33ed462b632bfc41f"
+		},
+		{
+			"ImportPath": "github.com/moul/http2curl",
+			"Rev": "1812aee76a1ce98d604a44200c6a23c689b17a89"
+		},
+		{
+			"ImportPath": "github.com/parnurzeal/gorequest",
+			"Comment": "v0.2.13-9-gc73179d",
+			"Rev": "c73179dd31355d86bd7692de9b47623d6d0fa696"
+		},
+		{
+			"ImportPath": "golang.org/x/net/publicsuffix",
+			"Rev": "0cb26f788dd4625d1956c6fd97ffc4c90669d129"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "7a56174f0086b32866ebd746a794417edbc678a1"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "a83829b6f1293c91addabc89d0571c246397bbf4"
+		}
+	]
+}
