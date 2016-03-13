@@ -111,9 +111,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// First check is err is nil
 	if retErr.IsNil() {
 		if len(returns) == 2 {
-			renderJson(w, returns[0].Interface())
+			renderJSON(w, returns[0].Interface())
 		} else { // Empty return
-			renderJson(w, map[string]string{})
+			renderJSON(w, map[string]string{})
 		}
 	} else {
 		if aerr, ok := retErr.Interface().(*appgo.ApiError); !ok {

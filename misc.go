@@ -25,14 +25,3 @@ const (
 type ErrCode int
 
 type DummyInput struct{}
-
-type Id int64
-
-func (id Id) String() string {
-	return strconv.FormatInt(int64(id), 10)
-}
-
-func IdFromStr(str string) Id {
-	i, _ := strconv.Atoi(str)
-	return Id(i)
-}

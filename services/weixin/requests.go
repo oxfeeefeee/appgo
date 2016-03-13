@@ -7,11 +7,6 @@ import (
 	"net/url"
 )
 
-var (
-	appId  string
-	secret string
-)
-
 type UserInfo struct {
 	Id       string `json:"openid"`
 	UnionId  string `json:"unionid"`
@@ -43,11 +38,6 @@ type AccessTokenResult struct {
 type apiError struct {
 	ErrCode int    `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
-}
-
-func Init(appId, secret string) {
-	appId = appId
-	secret = secret
 }
 
 func GetAccessToken(params *AccessTokenParams) *AccessTokenResult {

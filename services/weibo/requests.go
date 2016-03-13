@@ -7,12 +7,6 @@ import (
 	"net/url"
 )
 
-var (
-	appId       string
-	secret      string
-	redirectUrl string
-)
-
 type UserInfo struct {
 	Id    string `json:"idstr"`
 	Name  string `json:"name"`

@@ -15,7 +15,7 @@ func init() {
 	})
 }
 
-func renderJson(w http.ResponseWriter, v interface{}) {
+func renderJSON(w http.ResponseWriter, v interface{}) {
 	err := renderer.JSON(w, http.StatusOK, v)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -26,5 +26,5 @@ func renderJson(w http.ResponseWriter, v interface{}) {
 }
 
 func renderError(w http.ResponseWriter, err *appgo.ApiError) {
-	renderJson(w, err)
+	renderJSON(w, err)
 }

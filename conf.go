@@ -8,8 +8,18 @@ import (
 var Conf struct {
 	DevMode  bool
 	LogLevel log.Level
+	RootKey  string
 	Negroni  struct {
 		Port string
+	}
+	Weixin struct {
+		AppId  string
+		Secret string
+	}
+	Weibo struct {
+		AppId       string
+		Secret      string
+		RedirectUrl string
 	}
 }
 

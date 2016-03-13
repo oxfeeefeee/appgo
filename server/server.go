@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
 	"github.com/meatballhat/negroni-logrus"
@@ -40,7 +40,7 @@ func (s *Server) Serve() {
 	n := negroni.New()
 	n.Use(negroni.NewRecovery())
 	n.Use(negronilogrus.NewCustomMiddleware(
-		appgo.Conf.LogLevel, &logrus.JSONFormatter{}, "appgo"))
+		appgo.Conf.LogLevel, &log.TextFormatter{}, "appgo"))
 	n.UseHandler(s)
 	n.Run(appgo.Conf.Negroni.Port)
 }
