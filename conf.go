@@ -9,8 +9,21 @@ var Conf struct {
 	DevMode  bool
 	LogLevel log.Level
 	RootKey  string
-	Negroni  struct {
+	Mysql    struct {
+		Host     string
+		Port     string
+		User     string
+		Password string
+		DbName   string
+		Charset  string
+	}
+	Negroni struct {
 		Port string
+	}
+	TokenLifetime struct {
+		AppUser  int
+		WebUser  int
+		WebAdmin int
 	}
 	Weixin struct {
 		AppId  string

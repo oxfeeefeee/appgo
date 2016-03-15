@@ -6,27 +6,28 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/oxfeeefeee/appgo"
+	"github.com/oxfeeefeee/appgo/auth"
 	"net/http"
 )
 
 type Server struct {
-	auth Authenticator
+	ts TokenStore
 	*mux.Router
 }
-type Authenticator interface {
-	Validate(token string) (userId appgo.Id, role appgo.Role)
+type TokenStore interface {
+	Validate(token auth.Token) bool
 }
 
-func NewServer(auth Authenticator) *Server {
+func NewServer(ts TokenStore) *Server {
 	return &Server{
-		auth,
+		ts,
 		mux.NewRouter(),
 	}
 }
 
 func (s *Server) AddRest(path string, rest []interface{}) {
 	for _, api := range rest {
-		h := newHandler(api, s.auth)
+		h := newHandler(api, s.ts)
 		s.Handle(path+h.path, h).Methods(h.supports...)
 	}
 }

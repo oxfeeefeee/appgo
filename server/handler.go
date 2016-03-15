@@ -2,11 +2,12 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/oxfeeefeee/appgo"
+	"github.com/oxfeeefeee/appgo/auth"
 	"net/http"
 	"reflect"
 )
@@ -36,7 +37,7 @@ type handler struct {
 	path     string
 	funcs    map[string]*httpFunc
 	supports []string
-	auth     Authenticator
+	ts       TokenStore
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -51,9 +52,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	token := r.Header.Get(appgo.CustomTokenHeaderName)
-	user, role := h.auth.Validate(token)
 	if f.requireAuth {
+		user, _ := h.authByHeader(r)
 		s := input.Elem()
 		field := s.FieldByName(UserIdFieldName)
 		if user == 0 {
@@ -66,6 +66,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		field.SetInt(int64(user))
 	} else if f.requireAdmin {
+		user, role := h.authByHeader(r)
 		s := input.Elem()
 		f := s.FieldByName(AdminUserIdFieldName)
 		if user == 0 || role != appgo.RoleWebAdmin {
@@ -124,7 +125,19 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func newHandler(funcSet interface{}, auth Authenticator) *handler {
+func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
+	token := auth.Token(r.Header.Get(appgo.CustomTokenHeaderName))
+	user, role := token.Validate()
+	if user == 0 {
+		return 0, 0
+	}
+	if !h.ts.Validate(token) {
+		return 0, 0
+	}
+	return user, role
+}
+
+func newHandler(funcSet interface{}, ts TokenStore) *handler {
 	funcs := make(map[string]*httpFunc)
 	// Let if panic if funSet's type is not right
 	path := ""
@@ -151,7 +164,7 @@ func newHandler(funcSet interface{}, auth Authenticator) *handler {
 	if len(supports) == 0 {
 		log.Panicln("API supports no HTTP method")
 	}
-	return &handler{path, funcs, supports, auth}
+	return &handler{path, funcs, supports, ts}
 }
 
 func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
@@ -162,12 +175,12 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 	ftype := fieldVal.Type()
 	inNum := ftype.NumIn()
 	if inNum != 1 {
-		return nil, fmt.Errorf("API func needs to have exact 1 parameter")
+		return nil, errors.New("API func needs to have exact 1 parameter")
 	}
 	inputType := ftype.In(0)
 	dummyInput := false
 	if inputType.Kind() != reflect.Ptr {
-		return nil, fmt.Errorf("API func's parameter needs to be a pointer")
+		return nil, errors.New("API func's parameter needs to be a pointer")
 	}
 	if inputType == reflect.TypeOf((*appgo.DummyInput)(nil)) {
 		dummyInput = true
@@ -178,7 +191,7 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 	if fromIdField, ok := inputType.FieldByName(UserIdFieldName); ok {
 		requireAuth = true
 		if fromIdField.Type.Kind() != reflect.Int64 {
-			return nil, fmt.Errorf("API func's 2nd parameter needs to be Int64")
+			return nil, errors.New("API func's 2nd parameter needs to be Int64")
 		}
 		aa := fromIdField.Tag.Get("allowAnonymous")
 		allowAnonymous = (aa == "true")
@@ -187,14 +200,14 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 	if fromIdType, ok := inputType.FieldByName(AdminUserIdFieldName); ok {
 		requireAdmin = true
 		if fromIdType.Type.Kind() != reflect.Int64 {
-			return nil, fmt.Errorf("API func's 2nd parameter needs to be Int64")
+			return nil, errors.New("API func's 2nd parameter needs to be Int64")
 		}
 	}
 	hasResId := false
 	if resIdType, ok := inputType.FieldByName(ResIdFieldName); ok {
 		hasResId = true
 		if resIdType.Type.Kind() != reflect.Int64 {
-			return nil, fmt.Errorf("ResId needs to be Int64")
+			return nil, errors.New("ResId needs to be Int64")
 		}
 	}
 	hasContent := false
@@ -203,7 +216,7 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 		hasContent = true
 		contentType = ctype.Type
 		if ctype.Type.Kind() != reflect.Ptr {
-			return nil, fmt.Errorf("Content needs to be Int64")
+			return nil, errors.New("Content needs to be a pointer")
 		}
 	}
 	return &httpFunc{requireAuth, requireAdmin, hasResId, hasContent,

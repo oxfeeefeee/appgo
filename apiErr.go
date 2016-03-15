@@ -9,11 +9,15 @@ import (
 var (
 	NotFoundErr     error
 	UnauthorizedErr error
+	ForbiddenErr    error
+	InternalErr     error
 )
 
 func init() {
 	NotFoundErr = NewApiErrWithCode(ECodeNotFound)
 	UnauthorizedErr = NewApiErrWithCode(ECodeUnauthorized)
+	ForbiddenErr = NewApiErrWithCode(ECodeForbidden)
+	InternalErr = NewApiErrWithCode(ECodeInternal)
 }
 
 type ApiError struct {

@@ -1,7 +1,7 @@
 package appgo
 
 import (
-	"strconv"
+//"strconv"
 )
 
 const (
@@ -23,5 +23,13 @@ const (
 )
 
 type ErrCode int
+
+const (
+	SexDefault Sex = iota
+	SexMale
+	SexFemale
+)
+
+type Sex int8
 
 type DummyInput struct{}

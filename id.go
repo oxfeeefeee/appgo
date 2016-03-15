@@ -3,6 +3,7 @@ package appgo
 import (
 	"encoding/base64"
 	"encoding/binary"
+	"strconv"
 )
 
 var (
@@ -22,9 +23,9 @@ func IdFromStr(str string) Id {
 }
 
 func IdFromBase64(str string) Id {
-	if len(s) == 0 {
+	if len(str) == 0 {
 		return 0
-	} else if data, err := base64Encoding.DecodeString(s); err != nil {
+	} else if data, err := base64Encoding.DecodeString(str); err != nil {
 		return 0
 	} else {
 		val := binaryEndian.Uint64(data)
@@ -32,7 +33,7 @@ func IdFromBase64(str string) Id {
 	}
 }
 
-func (id Uid) Base64() string {
+func (id Id) Base64() string {
 	buf := make([]byte, 8)
 	binaryEndian.PutUint64(buf, uint64(int64(id)))
 	return base64Encoding.EncodeToString(buf)
