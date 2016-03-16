@@ -1,31 +1,33 @@
 package userSystem
 
 import (
+	"database/sql"
 	"github.com/oxfeeefeee/appgo"
 	"time"
 )
 
 type UserModel struct {
-	Id           appgo.Id
-	CreatedAt    time.Time
-	DeletedAt    time.Time
-	Username     string `gorm:"size:63;unique_index"`
-	PasswordSalt []byte `gorm:"size:63"`
-	PasswordHash []byte `gorm:"size:63"`
-	Role         appgo.Role
+	Id            appgo.Id
+	Username      sql.NullString `gorm:"size:63;unique_index"`
+	Email         sql.NullString `gorm:"unique_index"`
+	PasswordSalt  []byte         `gorm:"size:63"`
+	PasswordHash  []byte         `gorm:"size:63"`
+	WeiboId       sql.NullString `gorm:"size:63;unique_index"`
+	WeixinUnionId sql.NullString `gorm:"size:63;unique_index"`
 	// Only store appToken because webTokens are short lived
 	AppToken    []byte `gorm:"size:63"`
-	Email       string `gorm:"unique_index"`
-	BannedUntil time.Time
-
-	WeiboId       string `gorm:"size:63;unique_index"`
-	WeixinUnionId string `gorm:"size:63;unique_index"`
-
-	Nickname string `gorm:"size:63"`
-	Portrait string `gorm:"size:255"`
-	Sex      appgo.Sex
+	Role        appgo.Role
+	Nickname    sql.NullString `gorm:"size:63"`
+	Portrait    sql.NullString `gorm:"size:255"`
+	Sex         appgo.Sex
+	BannedUntil *time.Time
+	CreatedAt   time.Time
+	DeletedAt   *time.Time
 }
 
 func (_ *UserModel) TableName() string {
+	if U.tableName != "" {
+		return U.tableName
+	}
 	return "users"
 }

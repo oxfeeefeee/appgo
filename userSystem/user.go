@@ -5,6 +5,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
+	"github.com/oxfeeefeee/appgo/database"
 	"github.com/oxfeeefeee/appgo/services/weibo"
 	"github.com/oxfeeefeee/appgo/services/weixin"
 )
@@ -12,19 +13,21 @@ import (
 var U *UserSystem
 
 type UserSystem struct {
-	db *gorm.DB
+	db        *gorm.DB
+	tableName string
 }
 
-func Init(db *gorm.DB) *UserSystem {
+func Init(db *gorm.DB, tableName string) *UserSystem {
 	if U != nil {
 		return U
+	}
+	U = &UserSystem{
+		db,
+		tableName,
 	}
 	var user UserModel
 	if !db.HasTable(&user) {
 		db.CreateTable(&user)
-	}
-	U = &UserSystem{
-		db,
 	}
 	auth.Init(U, U, U)
 	return U
@@ -36,12 +39,12 @@ func (u *UserSystem) Validate(token auth.Token) bool {
 
 func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 	newToken auth.Token) (banned bool, extraInfo interface{}, err error) {
-	var user UserModel
-	if err := u.db.First(&user, id).Error; err != nil {
+	user := &UserModel{Id: id}
+	if err := u.db.First(user).Error; err != nil {
 		log.WithFields(log.Fields{
 			"id":        id,
 			"gormError": err,
-		}).Infoln("user not found")
+		}).Infoln("failed to find user")
 		return false, nil, appgo.NotFoundErr
 	}
 	if role > user.Role {
@@ -49,7 +52,7 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 	}
 	// TODO save other tokens
 	if newToken != "" && role == appgo.RoleAppUser {
-		if err := u.db.Save(&user).Error; err != nil {
+		if err := u.db.Save(user).Error; err != nil {
 			log.WithFields(log.Fields{
 				"id":        id,
 				"gormError": err,
@@ -58,13 +61,17 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 		return false, nil, appgo.InternalErr
 	}
 	// todo stuff about ban
-	return false, &user, nil
+	return false, user, nil
 }
 
 func (u *UserSystem) GetWeixinUser(unionId string) (uid appgo.Id, err error) {
 	var user UserModel
-	err = u.db.Where(&UserModel{WeixinUnionId: unionId}).First(&user).Error
+	err = u.db.Where(&UserModel{
+		WeixinUnionId: database.SqlStr(unionId)}).First(&user).Error
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			err = nil
+		}
 		return
 	}
 	return user.Id, nil
@@ -79,9 +86,9 @@ func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err err
 	}
 	user := &UserModel{
 		Role:          appgo.RoleAppUser,
-		WeixinUnionId: info.UnionId,
-		Nickname:      info.Nickname,
-		Portrait:      info.Image, //todo: copy image
+		WeixinUnionId: database.SqlStr(info.UnionId),
+		Nickname:      database.SqlStr(info.Nickname),
+		Portrait:      database.SqlStr(info.Image), //todo: copy image
 		Sex:           sex,
 	}
 	db := u.db.Save(user)
@@ -93,8 +100,12 @@ func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err err
 
 func (u *UserSystem) GetWeiboUser(openId string) (uid appgo.Id, err error) {
 	var user UserModel
-	err = u.db.Where(&UserModel{WeiboId: openId}).First(&user).Error
+	err = u.db.Where(&UserModel{
+		WeiboId: database.SqlStr(openId)}).First(&user).Error
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			err = nil
+		}
 		return
 	}
 	return user.Id, nil
@@ -109,9 +120,9 @@ func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error
 	}
 	user := &UserModel{
 		Role:     appgo.RoleAppUser,
-		WeiboId:  info.Id,
-		Nickname: info.Name,
-		Portrait: info.Image, //todo: copy image
+		WeiboId:  database.SqlStr(info.Id),
+		Nickname: database.SqlStr(info.Name),
+		Portrait: database.SqlStr(info.Image), //todo: copy image
 		Sex:      sex,
 	}
 	db := u.db.Save(user)
