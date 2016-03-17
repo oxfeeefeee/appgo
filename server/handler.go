@@ -60,7 +60,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if f.allowAnonymous {
 				field.SetInt(appgo.AnonymousId)
 			} else {
-				renderError(w, appgo.NewApiErrWithCode(appgo.ECodeUnauthorized))
+				renderError(w, appgo.NewApiErr(
+					appgo.ECodeUnauthorized,
+					"either remove UserId__ in your input define, or add allowAnonymous tag",
+				))
 				return
 			}
 		}
@@ -70,7 +73,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s := input.Elem()
 		f := s.FieldByName(AdminUserIdFieldName)
 		if user == 0 || role != appgo.RoleWebAdmin {
-			renderError(w, appgo.NewApiErrWithCode(appgo.ECodeUnauthorized))
+			renderError(w, appgo.NewApiErr(
+				appgo.ECodeUnauthorized,
+				"admin role required, you could remove AdminUserId__ in your input define"))
 			return
 		}
 		f.SetInt(int64(user))
@@ -79,7 +84,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := appgo.IdFromStr(vars["id"])
 		if id == 0 {
-			renderError(w, appgo.NewApiErrWithCode(appgo.ECodeNotFound))
+			renderError(w, appgo.NewApiErr(
+				appgo.ECodeNotFound,
+				"ResourceId ('{id}' in url) required, you could remove ResourceId__ in your input define"))
 			return
 		}
 		s := input.Elem()
