@@ -1,6 +1,7 @@
 package userSystem
 
 import (
+	"database/sql"
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/oxfeeefeee/appgo"
@@ -49,13 +50,14 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 	}
 	// TODO save other tokens
 	if newToken != "" && role == appgo.RoleAppUser {
-		if err := u.db.Save(user).Error; err != nil {
+		tk := sql.NullString{string(newToken), true}
+		if err := u.db.Model(user).Updates(&UserModel{AppToken: tk}).Error; err != nil {
 			log.WithFields(log.Fields{
 				"id":        id,
 				"gormError": err,
 			}).Errorln("failed to save token")
+			return false, nil, appgo.InternalErr
 		}
-		return false, nil, appgo.InternalErr
 	}
 	// todo stuff about ban
 	return false, user, nil

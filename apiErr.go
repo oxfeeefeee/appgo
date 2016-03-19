@@ -14,10 +14,10 @@ var (
 )
 
 func init() {
-	NotFoundErr = NewApiErrWithCode(ECodeNotFound)
-	UnauthorizedErr = NewApiErrWithCode(ECodeUnauthorized)
-	ForbiddenErr = NewApiErrWithCode(ECodeForbidden)
-	InternalErr = NewApiErrWithCode(ECodeInternal)
+	NotFoundErr = NewApiErr(ECodeNotFound, "NotFound error")
+	UnauthorizedErr = NewApiErr(ECodeUnauthorized, "Unauthorized error")
+	ForbiddenErr = NewApiErr(ECodeForbidden, "Forbidden error")
+	InternalErr = NewApiErr(ECodeInternal, "Internal error")
 }
 
 type ApiError struct {

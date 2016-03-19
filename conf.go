@@ -41,4 +41,7 @@ func init() {
 	if err != nil {
 		log.WithField("error", err).Panicln("Failed to load config file")
 	}
+	if len(Conf.RootKey) != 16 {
+		log.Println("bad root key size")
+	}
 }

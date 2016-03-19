@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/base64"
+	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
 	"strconv"
@@ -16,7 +17,11 @@ func NewToken(userId appgo.Id, role appgo.Role, lifetime int) Token {
 	expires := appgo.Id(time.Now().Add(time.Second * time.Duration(lifetime)).UnixNano())
 	parts := []string{userId.Base64(), strconv.Itoa(int(role)), expires.Base64()}
 	data := strings.Join(parts, ",")
-	keybyte, _ := crypto.Encrypt([]byte(data), []byte(key))
+	keybyte, err := crypto.Encrypt([]byte(data), []byte(key))
+	if err != nil {
+		log.Errorln("failed to encrypt token")
+		return Token("")
+	}
 	str := base64.StdEncoding.EncodeToString(keybyte)
 	return Token(str)
 }
