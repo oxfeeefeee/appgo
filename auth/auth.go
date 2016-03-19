@@ -66,24 +66,27 @@ func Init(us UserSystem, wx WeixinSupport, wb WeiboSupport) {
 	}
 }
 
-func LoginByWeixin(code string, role appgo.Role) (*LoginResult, error) {
+func LoginByWeixin(openId, token, code string, role appgo.Role) (*LoginResult, error) {
 	if weixinSupport == nil {
 		return nil, errors.New("weixin login not supported")
 	}
-	params := &weixin.AccessTokenParams{*weixinAppInfo, code}
-	at := weixin.GetAccessToken(params)
-	if at == nil {
-		return nil, errors.New("Failed to get access token")
+	if openId == "" || token == "" {
+		params := &weixin.AccessTokenParams{*weixinAppInfo, code}
+		at := weixin.GetAccessToken(params)
+		if at == nil {
+			return nil, errors.New("Failed to get access token")
+		}
+		openId, token = at.OpenId, at.AccessToken
 	}
-	uid, err := weixinSupport.GetWeixinUser(at.UnionId)
+	winfo := weixin.GetUserInfo(openId, token)
+	if winfo == nil {
+		return nil, errors.New("Failed to get weixin user info")
+	}
+	uid, err := weixinSupport.GetWeixinUser(winfo.UnionId)
 	if err != nil {
 		return nil, err
 	}
 	if uid == 0 {
-		winfo := weixin.GetUserInfo(at.OpenId, at.AccessToken)
-		if winfo == nil {
-			return nil, errors.New("Failed to get weixin user info")
-		}
 		uid, err = weixinSupport.AddWeixinUser(winfo)
 		if err != nil {
 			return nil, err
@@ -92,21 +95,24 @@ func LoginByWeixin(code string, role appgo.Role) (*LoginResult, error) {
 	return checkIn(uid, role)
 }
 
-func LoginByWeibo(code string, role appgo.Role) (*LoginResult, error) {
+func LoginByWeibo(openId, token, code string, role appgo.Role) (*LoginResult, error) {
 	if weiboSupport == nil {
 		return nil, errors.New("weibo login not supported")
 	}
-	params := &weibo.AccessTokenParams{*weiboAppInfo, code}
-	at := weibo.GetAccessToken(params)
-	if at == nil {
-		return nil, errors.New("Failed to get access token")
+	if openId == "" || token == "" {
+		params := &weibo.AccessTokenParams{*weiboAppInfo, code}
+		at := weibo.GetAccessToken(params)
+		if at == nil {
+			return nil, errors.New("Failed to get access token")
+		}
+		openId, token = at.Id, at.AccessToken
 	}
-	uid, err := weiboSupport.GetWeiboUser(at.Id)
+	uid, err := weiboSupport.GetWeiboUser(openId)
 	if err != nil {
 		return nil, err
 	}
 	if uid == 0 {
-		winfo := weibo.GetUserInfo(at.Id, at.AccessToken)
+		winfo := weibo.GetUserInfo(openId, token)
 		if winfo == nil {
 			return nil, errors.New("Failed to get weibo user info")
 		}

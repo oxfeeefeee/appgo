@@ -1,8 +1,8 @@
 package appgo
 
-const AnonymousId = -666666
+const AnonymousId = 6666
 
-const InternalTestId = -777777
+const InternalTestId = 7777
 
 const InternalTestToken = "sjadfjlksadfjkljfwoeifshgsdhgsldfjf"
 

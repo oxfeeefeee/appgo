@@ -1,8 +1,11 @@
 package appgo
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
+	"math"
 	"strconv"
 )
 
@@ -17,8 +20,29 @@ func (id Id) String() string {
 	return strconv.FormatInt(int64(id), 10)
 }
 
+func (id Id) MarshalJSON() ([]byte, error) {
+	var buffer bytes.Buffer
+	buffer.WriteByte('"')
+	buffer.WriteString(id.String())
+	buffer.WriteByte('"')
+	return buffer.Bytes(), nil
+}
+
+func (id *Id) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	if val, err := strconv.ParseInt(s, 10, 64); err != nil {
+		return err
+	} else {
+		*id = Id(val)
+	}
+	return nil
+}
+
 func IdFromStr(str string) Id {
-	i, _ := strconv.Atoi(str)
+	i, _ := strconv.ParseInt(str, 10, 64)
 	return Id(i)
 }
 
@@ -31,6 +55,10 @@ func IdFromBase64(str string) Id {
 		val := binaryEndian.Uint64(data)
 		return Id(int64(val))
 	}
+}
+
+func IdMax() Id {
+	return Id(math.MaxInt64)
 }
 
 func (id Id) Base64() string {

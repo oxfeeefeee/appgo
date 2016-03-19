@@ -66,8 +66,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				))
 				return
 			}
+		} else {
+			field.SetInt(int64(user))
 		}
-		field.SetInt(int64(user))
 	} else if f.requireAdmin {
 		user, role := h.authByHeader(r)
 		s := input.Elem()

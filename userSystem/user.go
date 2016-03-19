@@ -25,10 +25,7 @@ func Init(db *gorm.DB, tableName string) *UserSystem {
 		db,
 		tableName,
 	}
-	var user UserModel
-	if !db.HasTable(&user) {
-		db.CreateTable(&user)
-	}
+	initTable(db)
 	auth.Init(U, U, U)
 	return U
 }
@@ -130,4 +127,24 @@ func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error
 		return
 	}
 	return user.Id, nil
+}
+
+func initTable(db *gorm.DB) {
+	var user UserModel
+	if !db.HasTable(&user) {
+		err := db.CreateTable(&user).Error
+		if err != nil {
+			log.WithFields(log.Fields{
+				"gormError": err,
+			}).Infoln("failed to create user table")
+		}
+		tableName := user.TableName()
+		if err := db.Exec("ALTER TABLE " + tableName + " AUTO_INCREMENT=10001").Error; err != nil {
+			if err != nil {
+				log.WithFields(log.Fields{
+					"gormError": err,
+				}).Infoln("failed to alter user table AUTO_INCREMENT")
+			}
+		}
+	}
 }
