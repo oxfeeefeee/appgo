@@ -13,6 +13,18 @@ var (
 	InternalErr     error
 )
 
+const (
+	ECodeOK                 ErrCode = 20000
+	ECodeBadRequest                 = 40000
+	ECodeUnauthorized               = 40100
+	ECodeForbidden                  = 40300
+	ECodeNotFound                   = 40400
+	ECodeInternal                   = 50000
+	ECode3rdPartyAuthFailed         = 50300
+)
+
+type ErrCode int
+
 func init() {
 	NotFoundErr = NewApiErr(ECodeNotFound, "NotFound error")
 	UnauthorizedErr = NewApiErr(ECodeUnauthorized, "Unauthorized error")
@@ -47,5 +59,17 @@ func NewApiErr(code ErrCode, msg string) *ApiError {
 }
 
 func NewApiErrWithCode(code ErrCode) *ApiError {
-	return &ApiError{code, ""}
+	return &ApiError{code, "No extra info"}
+}
+
+func NewApiErrWithMsg(msg string) *ApiError {
+	return &ApiError{ECodeInternal, msg}
+}
+
+func ApiErrFromGoErr(err error) *ApiError {
+	if e, ok := err.(*ApiError); ok {
+		return e
+	} else {
+		return NewApiErr(ECodeInternal, err.Error())
+	}
 }
