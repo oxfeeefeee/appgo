@@ -9,6 +9,7 @@ import (
 	"github.com/oxfeeefeee/appgo/auth"
 	"github.com/rs/cors"
 	"net/http"
+	"strings"
 )
 
 type Server struct {
@@ -43,7 +44,20 @@ func (s *Server) Serve() {
 	n.Use(negroni.NewRecovery())
 	n.Use(negronilogrus.NewCustomMiddleware(
 		appgo.Conf.LogLevel, &log.TextFormatter{}, "appgo"))
-	n.Use(cors.New(appgo.Conf.Cors))
+	n.Use(cors.New(corsOptions()))
 	n.UseHandler(s)
 	n.Run(appgo.Conf.Negroni.Port)
+}
+
+func corsOptions() cors.Options {
+	origins := strings.Split(appgo.Conf.Cors.AllowedOrigins, ",")
+	methods := strings.Split(appgo.Conf.Cors.AllowedMethods, ",")
+	headers := strings.Split(appgo.Conf.Cors.AllowedHeaders, ",")
+	return cors.Options{
+		AllowedOrigins:     origins,
+		AllowedMethods:     methods,
+		AllowedHeaders:     headers,
+		OptionsPassthrough: appgo.Conf.Cors.OptionsPassthrough,
+		Debug:              appgo.Conf.Cors.Debug,
+	}
 }

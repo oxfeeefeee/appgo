@@ -3,7 +3,6 @@ package appgo
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
-	"github.com/rs/cors"
 )
 
 var Conf struct {
@@ -21,7 +20,13 @@ var Conf struct {
 	Negroni struct {
 		Port string
 	}
-	Cors          cors.Options
+	Cors struct {
+		AllowedOrigins     string
+		AllowedMethods     string
+		AllowedHeaders     string
+		OptionsPassthrough bool
+		Debug              bool
+	}
 	TokenLifetime struct {
 		AppUser  int
 		WebUser  int
