@@ -8,4 +8,5 @@ import (
 	_ "github.com/jinzhu/gorm"
 	_ "github.com/meatballhat/negroni-logrus"
 	_ "github.com/parnurzeal/gorequest"
+	_ "github.com/rs/cors"
 )

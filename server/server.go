@@ -7,6 +7,7 @@ import (
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
+	"github.com/rs/cors"
 	"net/http"
 )
 
@@ -42,6 +43,7 @@ func (s *Server) Serve() {
 	n.Use(negroni.NewRecovery())
 	n.Use(negronilogrus.NewCustomMiddleware(
 		appgo.Conf.LogLevel, &log.TextFormatter{}, "appgo"))
+	n.Use(cors.New(appgo.Conf.Cors))
 	n.UseHandler(s)
 	n.Run(appgo.Conf.Negroni.Port)
 }

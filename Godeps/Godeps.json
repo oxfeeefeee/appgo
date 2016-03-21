@@ -38,6 +38,18 @@
 			"Rev": "c73179dd31355d86bd7692de9b47623d6d0fa696"
 		},
 		{
+			"ImportPath": "github.com/rs/cors",
+			"Rev": "5950cf11d77f8a61b432a25dd4d444b4ced01379"
+		},
+		{
+			"ImportPath": "github.com/rs/xhandler",
+			"Rev": "d9d9599b6aaf6a058cb7b1f48291ded2cbd13390"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "0cb26f788dd4625d1956c6fd97ffc4c90669d129"
+		},
+		{
 			"ImportPath": "golang.org/x/net/publicsuffix",
 			"Rev": "0cb26f788dd4625d1956c6fd97ffc4c90669d129"
 		},
