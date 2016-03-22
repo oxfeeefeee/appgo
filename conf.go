@@ -41,6 +41,13 @@ var Conf struct {
 		Secret      string
 		RedirectUrl string
 	}
+	Qiniu struct {
+		AccessKey      string
+		Secret         string
+		Bucket         string
+		Domain         string
+		DefaultExpires int
+	}
 }
 
 func init() {

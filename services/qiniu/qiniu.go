@@ -1,11 +1,12 @@
 package qiniu
 
 import (
-	qndigest "github.com/qiniu/api/auth/digest"
-	"github.com/qiniu/api/conf"
-	qnio "github.com/qiniu/api/io"
-	"github.com/qiniu/api/rs"
-	qnurl "github.com/qiniu/api/url"
+	"github.com/oxfeeefeee/appgo"
+	qndigest "github.com/qiniu/api.v6/auth/digest"
+	"github.com/qiniu/api.v6/conf"
+	qnio "github.com/qiniu/api.v6/io"
+	"github.com/qiniu/api.v6/rs"
+	qnurl "github.com/qiniu/api.v6/url"
 	"io"
 	"strconv"
 	"strings"
@@ -26,26 +27,27 @@ type QiniuParams struct {
 	DefaultExpires int
 }
 
-func Init(params *QiniuParams) {
+func Init() {
+	params := appgo.Conf.Qiniu
 	conf.ACCESS_KEY = params.AccessKey
 	conf.SECRET_KEY = params.Secret
 	bucketName = params.Bucket
 	domain = params.Domain
 	putPolicy = rs.PutPolicy{
-		Expires: uint32(params.Domain),
+		Expires: uint32(params.DefaultExpires),
 	}
 	getPolicy = rs.GetPolicy{
-		Expires: uint32(params.Domain),
+		Expires: uint32(params.DefaultExpires),
 	}
 }
 
-func GetUrl(key string, expiry uid.Uid, params string) string {
+func GetUrl(key string, expiryUnix int64, params string) string {
 	baseUrl := makeBaseUrl(key)
 	url := baseUrl + "?" + params
-	if expiry == 0 {
+	if expiryUnix == 0 {
 		return getPolicy.MakeRequest(url, nil)
 	}
-	return makeRequest(url, expiry, nil)
+	return makeRequest(url, expiryUnix, nil)
 }
 
 func PublicGetUrl(key string) string {
@@ -69,15 +71,13 @@ func makeBaseUrl(key string) string {
 	return "http://" + domain + "/" + qnurl.Escape(key)
 }
 
-func makeRequest(baseUrl string, expiry uid.Uid, mac *qndigest.Mac) (privateUrl string) {
-	deadline := expiry.Time().Unix()
-
+func makeRequest(baseUrl string, expiryUnix int64, mac *qndigest.Mac) (privateUrl string) {
 	if strings.Contains(baseUrl, "?") {
 		baseUrl += "&e="
 	} else {
 		baseUrl += "?e="
 	}
-	baseUrl += strconv.FormatInt(deadline, 10)
+	baseUrl += strconv.FormatInt(expiryUnix, 10)
 
 	token := qndigest.Sign(mac, []byte(baseUrl))
 	return baseUrl + "&token=" + token
