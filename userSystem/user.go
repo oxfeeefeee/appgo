@@ -7,6 +7,7 @@ import (
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
 	"github.com/oxfeeefeee/appgo/database"
+	"github.com/oxfeeefeee/appgo/services/qq"
 	"github.com/oxfeeefeee/appgo/services/weibo"
 	"github.com/oxfeeefeee/appgo/services/weixin"
 )
@@ -27,7 +28,7 @@ func Init(db *gorm.DB, tableName string) *UserSystem {
 		tableName,
 	}
 	initTable(db)
-	auth.Init(U, U, U)
+	auth.Init(U, U, U, U)
 	return U
 }
 
@@ -121,6 +122,40 @@ func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error
 		Role:     appgo.RoleAppUser,
 		WeiboId:  database.SqlStr(info.Id),
 		Nickname: database.SqlStr(info.Name),
+		Portrait: database.SqlStr(info.Image), //todo: copy image
+		Sex:      sex,
+	}
+	db := u.db.Save(user)
+	if db.Error != nil {
+		return
+	}
+	return user.Id, nil
+}
+
+func (u *UserSystem) GetQqUser(openId string) (uid appgo.Id, err error) {
+	var user UserModel
+	err = u.db.Where(&UserModel{
+		QqOpenId: database.SqlStr(openId)}).First(&user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			err = nil
+		}
+		return
+	}
+	return user.Id, nil
+}
+
+func (u *UserSystem) AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error) {
+	sex := appgo.SexDefault
+	if info.Sex == "男" {
+		sex = appgo.SexMale
+	} else if info.Sex == "女" {
+		sex = appgo.SexFemale
+	}
+	user := &UserModel{
+		Role:     appgo.RoleAppUser,
+		QqOpenId: database.SqlStr(info.OpenId),
+		Nickname: database.SqlStr(info.Nickname),
 		Portrait: database.SqlStr(info.Image), //todo: copy image
 		Sex:      sex,
 	}

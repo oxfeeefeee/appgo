@@ -41,6 +41,9 @@ var Conf struct {
 		Secret      string
 		RedirectUrl string
 	}
+	Qq struct {
+		AppId string
+	}
 	Qiniu struct {
 		AccessKey      string
 		Secret         string

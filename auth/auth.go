@@ -4,6 +4,7 @@ import (
 	"errors"
 	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
+	"github.com/oxfeeefeee/appgo/services/qq"
 	"github.com/oxfeeefeee/appgo/services/weibo"
 	"github.com/oxfeeefeee/appgo/services/weixin"
 )
@@ -11,10 +12,12 @@ import (
 var (
 	weixinAppInfo *weixin.AppInfo
 	weiboAppInfo  *weibo.AppInfo
+	qqAppInfo     *qq.AppInfo
 
 	userSystem    UserSystem
 	weixinSupport WeixinSupport
 	weiboSupport  WeiboSupport
+	qqSupport     QqSupport
 )
 
 type LoginResult struct {
@@ -41,10 +44,16 @@ type WeiboSupport interface {
 	AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error)
 }
 
-func Init(us UserSystem, wx WeixinSupport, wb WeiboSupport) {
+type QqSupport interface {
+	GetQqUser(openId string) (uid appgo.Id, err error)
+	AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error)
+}
+
+func Init(us UserSystem, wx WeixinSupport, wb WeiboSupport, qqsp QqSupport) {
 	userSystem = us
 	weixinSupport = wx
 	weiboSupport = wb
+	qqSupport = qqsp
 	if wx != nil {
 		weixinAppInfo = &weixin.AppInfo{
 			appgo.Conf.Weixin.AppId,
@@ -62,6 +71,14 @@ func Init(us UserSystem, wx WeixinSupport, wb WeiboSupport) {
 		}
 		if weiboAppInfo.AppId == "" || weiboAppInfo.Secret == "" {
 			log.Panicln("Bad weibo config")
+		}
+	}
+	if qqsp != nil {
+		qqAppInfo = &qq.AppInfo{
+			appgo.Conf.Qq.AppId,
+		}
+		if qqAppInfo.AppId == "" {
+			log.Panicln("Bad qq config")
 		}
 	}
 }
@@ -117,6 +134,30 @@ func LoginByWeibo(openId, token, code string, role appgo.Role) (*LoginResult, er
 			return nil, errors.New("Failed to get weibo user info")
 		}
 		uid, err = weiboSupport.AddWeiboUser(winfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return checkIn(uid, role)
+}
+
+func LoginByQq(openId, token string, role appgo.Role) (*LoginResult, error) {
+	if qqSupport == nil {
+		return nil, errors.New("qq login not supported")
+	}
+	if openId == "" || token == "" {
+		return nil, errors.New("LoginByQq: bad id or token")
+	}
+	uid, err := qqSupport.GetQqUser(openId)
+	if err != nil {
+		return nil, err
+	}
+	if uid == 0 {
+		winfo := qq.GetUserInfo(qqAppInfo, openId, token)
+		if winfo == nil {
+			return nil, errors.New("Failed to get qq user info")
+		}
+		uid, err = qqSupport.AddQqUser(winfo)
 		if err != nil {
 			return nil, err
 		}
