@@ -68,4 +68,7 @@ func TestCrypto(t *testing.T) {
 	re, err = Decrypt(re, key)
 	fmt.Println("Decrypted:", string(re), len(re), err)
 	assert.Equal(t, data, re)
+
+	t.Log(RandNumStr(6))
+	t.Log(RandNumStr(16))
 }

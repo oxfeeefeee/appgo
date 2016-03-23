@@ -9,7 +9,8 @@ import (
 type UserModel struct {
 	Id            appgo.Id
 	Username      sql.NullString `gorm:"size:63;unique_index"`
-	Email         sql.NullString `gorm:"unique_index"`
+	Email         sql.NullString `gorm:"size:63;unique_index"`
+	Mobile        sql.NullString `gorm:"size:15;unique_index"`
 	PasswordSalt  []byte         `gorm:"size:63"`
 	PasswordHash  []byte         `gorm:"size:63"`
 	WeiboId       sql.NullString `gorm:"size:63;unique_index"`

@@ -18,6 +18,7 @@ var (
 	weixinSupport WeixinSupport
 	weiboSupport  WeiboSupport
 	qqSupport     QqSupport
+	mobileSupport MobileSupport
 )
 
 type LoginResult struct {
@@ -49,11 +50,13 @@ type QqSupport interface {
 	AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error)
 }
 
-func Init(us UserSystem, wx WeixinSupport, wb WeiboSupport, qqsp QqSupport) {
+func Init(us UserSystem, wx WeixinSupport, wb WeiboSupport,
+	qqsp QqSupport, mobile MobileSupport) {
 	userSystem = us
 	weixinSupport = wx
 	weiboSupport = wb
 	qqSupport = qqsp
+	mobileSupport = mobile
 	if wx != nil {
 		weixinAppInfo = &weixin.AppInfo{
 			appgo.Conf.Weixin.AppId,

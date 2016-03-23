@@ -17,18 +17,32 @@ var U *UserSystem
 type UserSystem struct {
 	db        *gorm.DB
 	tableName string
+	appgo.MobileMsgSender
+	appgo.KvStore
 }
 
-func Init(db *gorm.DB, tableName string) *UserSystem {
+type UserSystemSettings struct {
+	TableName       string
+	MobileMsgSender appgo.MobileMsgSender
+	KvStore         appgo.KvStore
+}
+
+func Init(db *gorm.DB, settings UserSystemSettings) *UserSystem {
 	if U != nil {
 		return U
 	}
 	U = &UserSystem{
 		db,
-		tableName,
+		settings.TableName,
+		settings.MobileMsgSender,
+		settings.KvStore,
 	}
 	initTable(db)
-	auth.Init(U, U, U, U)
+	mobileSupport := U
+	if settings.MobileMsgSender == nil || settings.KvStore == nil {
+		mobileSupport = nil
+	}
+	auth.Init(U, U, U, U, mobileSupport)
 	return U
 }
 
@@ -65,16 +79,8 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 }
 
 func (u *UserSystem) GetWeixinUser(unionId string) (uid appgo.Id, err error) {
-	var user UserModel
-	err = u.db.Where(&UserModel{
-		WeixinUnionId: database.SqlStr(unionId)}).First(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			err = nil
-		}
-		return
-	}
-	return user.Id, nil
+	return getUser(u.db, &UserModel{
+		WeixinUnionId: database.SqlStr(unionId)})
 }
 
 func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err error) {
@@ -91,24 +97,12 @@ func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err err
 		Portrait:      database.SqlStr(info.Image), //todo: copy image
 		Sex:           sex,
 	}
-	db := u.db.Save(user)
-	if db.Error != nil {
-		return
-	}
-	return user.Id, nil
+	return saveUser(u.db, user)
 }
 
 func (u *UserSystem) GetWeiboUser(openId string) (uid appgo.Id, err error) {
-	var user UserModel
-	err = u.db.Where(&UserModel{
-		WeiboId: database.SqlStr(openId)}).First(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			err = nil
-		}
-		return
-	}
-	return user.Id, nil
+	return getUser(u.db, &UserModel{
+		WeiboId: database.SqlStr(openId)})
 }
 
 func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error) {
@@ -125,24 +119,12 @@ func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error
 		Portrait: database.SqlStr(info.Image), //todo: copy image
 		Sex:      sex,
 	}
-	db := u.db.Save(user)
-	if db.Error != nil {
-		return
-	}
-	return user.Id, nil
+	return saveUser(u.db, user)
 }
 
 func (u *UserSystem) GetQqUser(openId string) (uid appgo.Id, err error) {
-	var user UserModel
-	err = u.db.Where(&UserModel{
-		QqOpenId: database.SqlStr(openId)}).First(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			err = nil
-		}
-		return
-	}
-	return user.Id, nil
+	return getUser(u.db, &UserModel{
+		QqOpenId: database.SqlStr(openId)})
 }
 
 func (u *UserSystem) AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error) {
@@ -159,9 +141,38 @@ func (u *UserSystem) AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error) {
 		Portrait: database.SqlStr(info.Image), //todo: copy image
 		Sex:      sex,
 	}
-	db := u.db.Save(user)
-	if db.Error != nil {
-		return
+	return saveUser(u.db, user)
+}
+
+func (u *UserSystem) GetMobileUser(mobile string) (uid appgo.Id, err error) {
+	return getUser(u.db, &UserModel{
+		Mobile: database.SqlStr(mobile)})
+}
+
+func (u *UserSystem) AddMobileUser(info *auth.MobileUserInfo) (appgo.Id, error) {
+	user := &UserModel{
+		Role:     appgo.RoleAppUser,
+		Mobile:   database.SqlStr(info.Mobile),
+		Nickname: database.SqlStr(info.Nickname),
+		Sex:      info.Sex,
+	}
+	return saveUser(u.db, user)
+}
+
+func getUser(db *gorm.DB, where *UserModel) (appgo.Id, error) {
+	var user UserModel
+	if db := db.Where(where).First(&user); db.Error != nil {
+		if db.RecordNotFound() {
+			return 0, nil
+		}
+		return 0, db.Error
+	}
+	return user.Id, nil
+}
+
+func saveUser(db *gorm.DB, user *UserModel) (appgo.Id, error) {
+	if db := db.Save(user); db.Error != nil {
+		return 0, db.Error
 	}
 	return user.Id, nil
 }

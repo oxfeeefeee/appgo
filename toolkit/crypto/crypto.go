@@ -10,7 +10,23 @@ import (
 	"crypto/sha512"
 	"errors"
 	"io"
+	"math/big"
 )
+
+const (
+	numberchars = "1234567890"
+)
+
+func RandNumStr(l int) string {
+	var max big.Int
+	max.SetInt64(int64(len(numberchars)))
+	ret := make([]byte, 0, l)
+	for i := 0; i < l; i++ {
+		index, _ := rand.Int(rand.Reader, &max)
+		ret = append(ret, numberchars[index.Int64()])
+	}
+	return string(ret)
+}
 
 func RandBytes(c int) ([]byte, error) {
 	b := make([]byte, c)

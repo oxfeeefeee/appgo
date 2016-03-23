@@ -7,10 +7,16 @@ import (
 )
 
 var (
-	NotFoundErr     error
-	UnauthorizedErr error
-	ForbiddenErr    error
-	InternalErr     error
+	NotFoundErr           error
+	UnauthorizedErr       error
+	ForbiddenErr          error
+	InternalErr           error
+	InvalidUsernameErr    error
+	InvalidNicknameErr    error
+	InvalidPasswordErr    error
+	MobileUserNotFoundErr error
+	MobileUserBadCodeErr  error
+	MobileUserBadTokenErr error
 )
 
 const (
@@ -21,6 +27,12 @@ const (
 	ECodeNotFound                   = 40400
 	ECodeInternal                   = 50000
 	ECode3rdPartyAuthFailed         = 50300
+	ECodeInvalidUsername            = 60001
+	ECodeInvalidNickname            = 60002
+	ECodeInvalidPassword            = 60003
+	ECodeMobileUserNotFound         = 60101
+	ECodeMobileUserBadCode          = 60102
+	ECodeMobileUserBadToken         = 60103
 )
 
 type ErrCode int
@@ -30,11 +42,17 @@ func init() {
 	UnauthorizedErr = NewApiErr(ECodeUnauthorized, "Unauthorized error")
 	ForbiddenErr = NewApiErr(ECodeForbidden, "Forbidden error")
 	InternalErr = NewApiErr(ECodeInternal, "Internal error")
+	InvalidUsernameErr = NewApiErr(ECodeInvalidUsername, "Invalid username")
+	InvalidNicknameErr = NewApiErr(ECodeInvalidNickname, "Invalid nickname")
+	InvalidPasswordErr = NewApiErr(ECodeInvalidPassword, "Invalid password")
+	MobileUserNotFoundErr = NewApiErr(ECodeMobileUserNotFound, "Mobile user not found")
+	MobileUserBadCodeErr = NewApiErr(ECodeMobileUserBadCode, "Mobile user bad code")
+	MobileUserBadTokenErr = NewApiErr(ECodeMobileUserBadToken, "Mobile user bad token")
 }
 
 type ApiError struct {
 	Code ErrCode `json:"errcode"`
-	Msg  string  `json:"msg"`
+	Msg  string  `json:"errmsg"`
 }
 
 func (e *ApiError) Error() string {
