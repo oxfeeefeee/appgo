@@ -34,7 +34,8 @@ func Init() {
 	bucketName = params.Bucket
 	domain = params.Domain
 	putPolicy = rs.PutPolicy{
-		Expires: uint32(params.DefaultExpires),
+		Expires:    uint32(params.DefaultExpires),
+		InsertOnly: 1,
 	}
 	getPolicy = rs.GetPolicy{
 		Expires: uint32(params.DefaultExpires),
@@ -54,16 +55,25 @@ func PublicGetUrl(key string) string {
 	return makeBaseUrl(key)
 }
 
+func NoKeyToken() string {
+	putPolicy.Scope = bucketName
+	return putPolicy.Token(nil)
+}
+
 func PutToken(key string) string {
 	putPolicy.Scope = bucketName + ":" + key
 	return putPolicy.Token(nil)
 }
 
-func PutFile(key string, r io.Reader, size int64) error {
+func PutFile(key string, r io.Reader, size int64) (string, error) {
 	putPolicy.Scope = bucketName + ":" + key
 	token := putPolicy.Token(nil)
 	//var ret qnio.PutRet
-	return qnio.Put2(nil, nil /*&ret*/, token, key, r, size, nil)
+	if err := qnio.Put2(nil, nil /*&ret*/, token, key, r, size, nil); err != nil {
+		return "", err
+	} else {
+		return makeBaseUrl(key), nil
+	}
 }
 
 func makeBaseUrl(key string) string {

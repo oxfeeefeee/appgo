@@ -9,10 +9,12 @@ import (
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
 	"github.com/oxfeeefeee/appgo/database"
+	"github.com/oxfeeefeee/appgo/services/qiniu"
 	"github.com/oxfeeefeee/appgo/services/qq"
 	"github.com/oxfeeefeee/appgo/services/weibo"
 	"github.com/oxfeeefeee/appgo/services/weixin"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
+	"github.com/parnurzeal/gorequest"
 )
 
 var U *UserSystem
@@ -93,11 +95,13 @@ func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err err
 	} else if info.Sex == 2 {
 		sex = appgo.SexFemale
 	}
+	imageName := "weixin_user_" + info.UnionId
+	imageName, _ = copyImage(info.Image, imageName)
 	user := &UserModel{
 		Role:          appgo.RoleAppUser,
 		WeixinUnionId: database.SqlStr(info.UnionId),
 		Nickname:      database.SqlStr(info.Nickname),
-		Portrait:      database.SqlStr(info.Image), //todo: copy image
+		Portrait:      database.SqlStr(imageName),
 		Sex:           sex,
 	}
 	return saveUser(u.db, user)
@@ -115,11 +119,13 @@ func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error
 	} else if info.Sex == "f" {
 		sex = appgo.SexFemale
 	}
+	imageName := "weibo_user_" + info.Id
+	imageName, _ = copyImage(info.Image, imageName)
 	user := &UserModel{
 		Role:     appgo.RoleAppUser,
 		WeiboId:  database.SqlStr(info.Id),
 		Nickname: database.SqlStr(info.Name),
-		Portrait: database.SqlStr(info.Image), //todo: copy image
+		Portrait: database.SqlStr(imageName),
 		Sex:      sex,
 	}
 	return saveUser(u.db, user)
@@ -137,11 +143,13 @@ func (u *UserSystem) AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error) {
 	} else if info.Sex == "女" {
 		sex = appgo.SexFemale
 	}
+	imageName := "qq_user_" + info.OpenId
+	imageName, _ = copyImage(info.Image, imageName)
 	user := &UserModel{
 		Role:     appgo.RoleAppUser,
 		QqOpenId: database.SqlStr(info.OpenId),
 		Nickname: database.SqlStr(info.Nickname),
-		Portrait: database.SqlStr(info.Image), //todo: copy image
+		Portrait: database.SqlStr(imageName),
 		Sex:      sex,
 	}
 	return saveUser(u.db, user)
@@ -198,6 +206,19 @@ func (u *UserSystem) UpdatePwByMobile(mobile, password string) error {
 		}
 		return nil
 	}
+}
+
+func copyImage(from, to string) (string, error) {
+	_, body, errs := gorequest.New().Get(from).End()
+	if errs != nil {
+		errstr := "Failed to get image: " + from
+		log.WithFields(log.Fields{
+			"errors": errs,
+			"url":    from,
+		}).Error(errstr)
+		return "", errors.New(errstr)
+	}
+	return qiniu.PutFile(to, bytes.NewReader([]byte(body)), int64(len(body)))
 }
 
 func getUser(db *gorm.DB, where *UserModel) (appgo.Id, error) {
