@@ -32,7 +32,7 @@ type MobileSupport interface {
 	appgo.KvStore
 }
 
-func MobilePreRegister(mobile string) error {
+func MobilePreRegister(mobile string) (string, error) {
 	return sendSmsCode(mobile, appgo.SmsTemplateRegister)
 }
 
@@ -63,7 +63,7 @@ func MobileRegisterUser(info *MobileUserInfo, role appgo.Role) (*LoginResult, er
 	return checkIn(uid, role)
 }
 
-func MobilePwReset(mobile string) error {
+func MobilePwReset(mobile string) (string, error) {
 	return sendSmsCode(mobile, appgo.SmsTemplatePwReset)
 }
 
@@ -91,13 +91,13 @@ func LoginByMobile(mobile, password string, role appgo.Role) (*LoginResult, erro
 	return checkIn(uid, role)
 }
 
-func sendSmsCode(mobile string, template appgo.SmsTemplate) error {
+func sendSmsCode(mobile string, template appgo.SmsTemplate) (string, error) {
 	code := crypto.RandNumStr(mobileCodeLen)
 	if err := mobileSupport.Set(
 		mobileCodeKeyPrefix+mobile, code, mobileCodeTimeout); err != nil {
-		return err
+		return "", err
 	}
-	return mobileSupport.SendMobileCode(mobile, template, code)
+	return code, mobileSupport.SendMobileCode(mobile, template, code)
 }
 
 func verifySmsCode(mobile, code string) error {
