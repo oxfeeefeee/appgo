@@ -5,9 +5,6 @@ import (
 	///log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
-	//"github.com/oxfeeefeee/appgo/services/qq"
-	///"github.com/oxfeeefeee/appgo/services/weibo"
-	//"github.com/oxfeeefeee/appgo/services/weixin"
 )
 
 const (
@@ -28,35 +25,31 @@ type MobileUserInfo struct {
 }
 
 type MobileSupport interface {
-	GetMobileUser(mobile string) (uid appgo.Id, err error)
+	GetMobileUser(mobile, password string) (uid appgo.Id, err error)
 	AddMobileUser(info *MobileUserInfo) (uid appgo.Id, err error)
+	UpdatePwByMobile(mobile, password string) error
 	appgo.MobileMsgSender
 	appgo.KvStore
 }
 
-func SendMobileCode(mobile string) error {
-	code := crypto.RandNumStr(mobileCodeLen)
-	if err := mobileSupport.StoreKeyValue(
-		mobileCodeKeyPrefix+mobile, code, mobileCodeTimeout); err != nil {
-		return err
-	}
-	return mobileSupport.SendMobileCode(mobile, code)
+func MobilePreRegister(mobile string) error {
+	return sendSmsCode(mobile, appgo.SmsTemplateRegister)
 }
 
-func VerifyMobileCode(mobile, code string) (string, error) {
-	scode, err := mobileSupport.GetValueByKey(mobileCodeKeyPrefix + mobile)
-	if err != nil {
+func MobileVerifyRegister(mobile, code string) (string, error) {
+	if err := verifySmsCode(mobile, code); err != nil {
 		return "", err
 	}
-	if scode != code {
-		return "", appgo.MobileUserBadCodeErr
-	}
 	token := crypto.RandNumStr(mobileTokenLen)
+	if err := mobileSupport.Set(
+		mobileTokenKeyPrefix+mobile, token, mobileTokenTimeout); err != nil {
+		return "", err
+	}
 	return token, nil
 }
 
-func RegisterMobileUser(info *MobileUserInfo, role appgo.Role) (*LoginResult, error) {
-	stoken, err := mobileSupport.GetValueByKey(mobileTokenKeyPrefix + info.Mobile)
+func MobileRegisterUser(info *MobileUserInfo, role appgo.Role) (*LoginResult, error) {
+	stoken, err := mobileSupport.Get(mobileTokenKeyPrefix + info.Mobile)
 	if err != nil {
 		return nil, err
 	}
@@ -70,16 +63,50 @@ func RegisterMobileUser(info *MobileUserInfo, role appgo.Role) (*LoginResult, er
 	return checkIn(uid, role)
 }
 
-func LoginByMobile(mobile string, role appgo.Role) (*LoginResult, error) {
-	if mobileSupport == nil {
-		return nil, errors.New("qq mobile not supported")
+func MobilePwReset(mobile string) error {
+	return sendSmsCode(mobile, appgo.SmsTemplatePwReset)
+}
+
+func MobileVerifyPwReset(mobile, code, password string) error {
+	if err := verifySmsCode(mobile, code); err != nil {
+		return err
 	}
-	uid, err := mobileSupport.GetMobileUser(mobile)
+	if err := mobileSupport.UpdatePwByMobile(mobile, password); err != nil {
+		return err
+	}
+	return nil
+}
+
+func LoginByMobile(mobile, password string, role appgo.Role) (*LoginResult, error) {
+	if mobileSupport == nil {
+		return nil, errors.New("mobile not supported")
+	}
+	uid, err := mobileSupport.GetMobileUser(mobile, password)
 	if err != nil {
 		return nil, err
 	}
 	if uid == 0 {
-
+		return nil, appgo.MobileUserNotFoundErr
 	}
 	return checkIn(uid, role)
+}
+
+func sendSmsCode(mobile string, template appgo.SmsTemplate) error {
+	code := crypto.RandNumStr(mobileCodeLen)
+	if err := mobileSupport.Set(
+		mobileCodeKeyPrefix+mobile, code, mobileCodeTimeout); err != nil {
+		return err
+	}
+	return mobileSupport.SendMobileCode(mobile, template, code)
+}
+
+func verifySmsCode(mobile, code string) error {
+	scode, err := mobileSupport.Get(mobileCodeKeyPrefix + mobile)
+	if err != nil {
+		return err
+	}
+	if scode != code {
+		return appgo.MobileUserBadCodeErr
+	}
+	return nil
 }

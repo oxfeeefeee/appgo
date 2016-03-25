@@ -28,13 +28,21 @@ const (
 
 type Sex int8
 
+const (
+	_ SmsTemplate = iota
+	SmsTemplateRegister
+	SmsTemplatePwReset
+)
+
+type SmsTemplate int
+
 type DummyInput struct{}
 
 type KvStore interface {
-	StoreKeyValue(k, v string, timeout int) error
-	GetValueByKey(k string) (string, error)
+	Set(k, v string, timeout int) error
+	Get(k string) (string, error)
 }
 
 type MobileMsgSender interface {
-	SendMobileCode(mobile, code string) error
+	SendMobileCode(mobile string, template SmsTemplate, code string) error
 }

@@ -1,7 +1,9 @@
 package userSystem
 
 import (
+	"bytes"
 	"database/sql"
+	"errors"
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/gorm"
 	"github.com/oxfeeefeee/appgo"
@@ -10,6 +12,7 @@ import (
 	"github.com/oxfeeefeee/appgo/services/qq"
 	"github.com/oxfeeefeee/appgo/services/weibo"
 	"github.com/oxfeeefeee/appgo/services/weixin"
+	"github.com/oxfeeefeee/appgo/toolkit/crypto"
 )
 
 var U *UserSystem
@@ -144,19 +147,57 @@ func (u *UserSystem) AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error) {
 	return saveUser(u.db, user)
 }
 
-func (u *UserSystem) GetMobileUser(mobile string) (uid appgo.Id, err error) {
-	return getUser(u.db, &UserModel{
-		Mobile: database.SqlStr(mobile)})
+func (u *UserSystem) GetMobileUser(mobile, password string) (uid appgo.Id, err error) {
+	where := &UserModel{Mobile: database.SqlStr(mobile)}
+	var user UserModel
+	if db := u.db.Where(where).First(&user); db.Error != nil {
+		if db.RecordNotFound() {
+			return 0, nil
+		}
+		return 0, db.Error
+	}
+	hash := crypto.SaltedHash(user.PasswordSalt, password)
+	if !bytes.Equal(hash[:], user.PasswordHash) {
+		return 0, appgo.InvalidPasswordErr
+	}
+	return user.Id, nil
 }
 
 func (u *UserSystem) AddMobileUser(info *auth.MobileUserInfo) (appgo.Id, error) {
-	user := &UserModel{
-		Role:     appgo.RoleAppUser,
-		Mobile:   database.SqlStr(info.Mobile),
-		Nickname: database.SqlStr(info.Nickname),
-		Sex:      info.Sex,
+	if salt, err := crypto.RandBytes(64); err != nil {
+		return 0, err
+	} else {
+		hash := crypto.SaltedHash(salt, info.Password)
+		user := &UserModel{
+			Role:         appgo.RoleAppUser,
+			Mobile:       database.SqlStr(info.Mobile),
+			PasswordSalt: salt,
+			PasswordHash: hash[:],
+			Nickname:     database.SqlStr(info.Nickname),
+			Sex:          info.Sex,
+		}
+		return saveUser(u.db, user)
 	}
-	return saveUser(u.db, user)
+}
+
+func (u *UserSystem) UpdatePwByMobile(mobile, password string) error {
+	where := &UserModel{Mobile: database.SqlStr(mobile)}
+	if uid, err := getUser(u.db, where); err != nil {
+		return err
+	} else if uid == 0 {
+		return errors.New("UpdatePwByMobile: user not found")
+	}
+	if salt, err := crypto.RandBytes(64); err != nil {
+		return err
+	} else {
+		hash := crypto.SaltedHash(salt, password)
+		update := &UserModel{PasswordSalt: salt, PasswordHash: hash[:]}
+		if err := u.db.Model(&UserModel{}).Where(where).
+			Updates(update).Error; err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 func getUser(db *gorm.DB, where *UserModel) (appgo.Id, error) {
