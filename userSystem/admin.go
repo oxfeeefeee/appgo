@@ -17,20 +17,20 @@ func (u *UserSystem) ReadUser(id appgo.Id) (*UserData, error) {
 	return dbModelToData(m), nil
 }
 
-func (u *UserSystem) CreateUser(user *UserData) (appgo.Id, error) {
+func (u *UserSystem) CreateUser(user *UserData) (*UserData, error) {
 	if err := U.db.Save(dataToDbModel(user)).Error; err != nil {
-		return 0, err
+		return nil, err
 	} else {
-		return user.Id, nil
+		return u.ReadUser(user.Id)
 	}
 }
 
-func (u *UserSystem) UpdateUser(id appgo.Id, user *UserData) error {
+func (u *UserSystem) UpdateUser(id appgo.Id, user *UserData) (*UserData, error) {
 	um := &UserModel{Id: id}
 	if err := U.db.Model(um).Updates(dataToDbModel(user)).Error; err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return u.ReadUser(id)
 }
 
 func (u *UserSystem) DeleteUser(id appgo.Id) error {
