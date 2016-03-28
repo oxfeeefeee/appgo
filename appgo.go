@@ -55,6 +55,12 @@ type MobileMsgSender interface {
 	SendMobileCode(mobile string, template SmsTemplate, code string) error
 }
 
+type PushInfo struct {
+	Platform Platform
+	Provider string
+	Token    string
+}
+
 type PushData struct {
 	Title       string
 	Message     string

@@ -115,6 +115,25 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 	return false, user, nil
 }
 
+func (u *UserSystem) UpdatePushInfo(id appgo.Id, pushInfo *appgo.PushInfo) error {
+	if pushInfo == nil {
+		return nil
+	}
+	user := &UserModel{Id: id}
+	var updates UserModel
+	updates.Platform = pushInfo.Platform
+	updates.PushProvider = sql.NullString{pushInfo.Provider, true}
+	updates.PushToken = sql.NullString{pushInfo.Token, true}
+	if err := u.db.Model(user).Updates(&updates).Error; err != nil {
+		log.WithFields(log.Fields{
+			"id":        id,
+			"gormError": err,
+		}).Errorln("failed to save push info")
+		return appgo.InternalErr
+	}
+	return nil
+}
+
 func (u *UserSystem) GetWeixinUser(unionId string) (uid appgo.Id, err error) {
 	return getUser(u.db, &UserModel{
 		WeixinUnionId: database.SqlStr(unionId)})
