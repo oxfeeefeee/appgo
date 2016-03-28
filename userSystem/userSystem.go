@@ -20,27 +20,59 @@ import (
 var U *UserSystem
 
 type UserSystem struct {
-	db        *gorm.DB
-	tableName string
+	db            *gorm.DB
+	tableName     string
+	Pushers       map[string]appgo.Pusher
+	DefaultPusher appgo.Pusher
 	appgo.MobileMsgSender
 	appgo.KvStore
 }
 
 type UserSystemSettings struct {
 	TableName       string
+	Pushers         []appgo.Pusher
 	MobileMsgSender appgo.MobileMsgSender
 	KvStore         appgo.KvStore
+}
+
+type UserData struct {
+	Id       appgo.Id
+	Username *string
+	Email    *string
+	Mobile   *string
+	Role     appgo.Role
+	Platform appgo.Platform
+	Nickname *string
+	Portrait *string
+	Sex      appgo.Sex
 }
 
 func Init(db *gorm.DB, settings UserSystemSettings) *UserSystem {
 	if U != nil {
 		return U
 	}
+	sender := settings.MobileMsgSender
+	if sender == nil {
+		sender = &defaultSender{}
+	}
+	store := settings.KvStore
+	if store == nil {
+		store = &defaultKvStore{}
+	}
+	pushers := make(map[string]appgo.Pusher)
+	for _, p := range settings.Pushers {
+		if _, ok := pushers[p.Name()]; ok {
+			panic("Duplicated pusher names.")
+		}
+		pushers[p.Name()] = p
+	}
 	U = &UserSystem{
 		db,
 		settings.TableName,
-		settings.MobileMsgSender,
-		settings.KvStore,
+		pushers,
+		&defaultPusher{},
+		sender,
+		store,
 	}
 	initTable(db)
 	mobileSupport := U
@@ -206,6 +238,57 @@ func (u *UserSystem) UpdatePwByMobile(mobile, password string) error {
 		}
 		return nil
 	}
+}
+
+func (u *UserSystem) UpdateAppToken(id appgo.Id, role appgo.Role) (string, error) {
+	newToken := auth.NewToken(id, role)
+	tk := sql.NullString{string(newToken), true}
+	user := &UserModel{Id: id}
+	if err := u.db.Model(user).Updates(&UserModel{AppToken: tk}).Error; err != nil {
+		log.WithFields(log.Fields{
+			"id":        id,
+			"gormError": err,
+		}).Errorln("failed to save token")
+		return "", appgo.InternalErr
+	}
+	return tk.String, nil
+}
+
+func dbModelToData(model *UserModel) *UserData {
+	return &UserData{
+		Id:       model.Id,
+		Username: &model.Username.String,
+		Email:    &model.Email.String,
+		Mobile:   &model.Mobile.String,
+		Role:     model.Role,
+		Platform: model.Platform,
+		Nickname: &model.Nickname.String,
+		Portrait: &model.Portrait.String,
+		Sex:      model.Sex,
+	}
+}
+
+func dataToDbModel(data *UserData) *UserModel {
+	var um UserModel
+	um.Id = data.Id
+	if data.Username != nil {
+		um.Username.String, um.Username.Valid = *data.Username, true
+	}
+	if data.Email != nil {
+		um.Email.String, um.Email.Valid = *data.Email, true
+	}
+	if data.Mobile != nil {
+		um.Mobile.String, um.Mobile.Valid = *data.Mobile, true
+	}
+	um.Role = data.Role
+	if data.Nickname != nil {
+		um.Nickname.String, um.Nickname.Valid = *data.Nickname, true
+	}
+	if data.Portrait != nil {
+		um.Portrait.String, um.Portrait.Valid = *data.Portrait, true
+	}
+	um.Sex = data.Sex
+	return &um
 }
 
 func copyImage(from, to string) (string, error) {

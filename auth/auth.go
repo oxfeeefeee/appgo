@@ -169,8 +169,7 @@ func LoginByQq(openId, token string, role appgo.Role) (*LoginResult, error) {
 }
 
 func checkIn(uid appgo.Id, role appgo.Role) (*LoginResult, error) {
-	tokenlf := tokenLifetime(role)
-	token := NewToken(uid, role, tokenlf)
+	token := NewToken(uid, role)
 	banned, info, err := userSystem.CheckIn(uid, role, token)
 	if err != nil {
 		return nil, err
@@ -187,17 +186,4 @@ func checkIn(uid appgo.Id, role appgo.Role) (*LoginResult, error) {
 		Token:    token,
 		UserInfo: info,
 	}, nil
-}
-
-func tokenLifetime(role appgo.Role) int {
-	switch role {
-	case appgo.RoleAppUser:
-		return appgo.Conf.TokenLifetime.AppUser
-	case appgo.RoleWebUser:
-		return appgo.Conf.TokenLifetime.WebUser
-	case appgo.RoleWebAdmin:
-		return appgo.Conf.TokenLifetime.WebAdmin
-	default:
-		return 0
-	}
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -40,6 +41,11 @@ func RandBytes(c int) ([]byte, error) {
 func SaltedHash(salt []byte, password string) [64]byte {
 	pw := append(salt, []byte(password)...)
 	return sha512.Sum512(pw)
+}
+
+func Md5(data []byte) []byte {
+	sum := md5.Sum(data)
+	return sum[:]
 }
 
 func Encrypt(data, key []byte) ([]byte, error) {

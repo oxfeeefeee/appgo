@@ -14,8 +14,8 @@ const CustomTokenHeaderName = "X-Appgo-Token"
 
 const (
 	RoleAppUser  Role = 100
-	RoleWebUser       = 110
-	RoleWebAdmin      = 210
+	RoleWebUser       = 101
+	RoleWebAdmin      = 200
 )
 
 type Role int
@@ -36,6 +36,14 @@ const (
 
 type SmsTemplate int
 
+const (
+	_ Platform = iota
+	PlatformIos
+	PlatformAndroid
+)
+
+type Platform int8
+
 type DummyInput struct{}
 
 type KvStore interface {
@@ -45,4 +53,20 @@ type KvStore interface {
 
 type MobileMsgSender interface {
 	SendMobileCode(mobile string, template SmsTemplate, code string) error
+}
+
+type PushData struct {
+	Title       string
+	Message     string
+	Sound       string
+	Badge       int
+	PlayVibrate bool
+	PlayLights  bool
+	PlaySound   bool
+	Custom      map[string]interface{}
+}
+
+type Pusher interface {
+	Name() string
+	PushNotif(platform Platform, tokens []string, content *PushData)
 }

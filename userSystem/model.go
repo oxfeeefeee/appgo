@@ -17,14 +17,17 @@ type UserModel struct {
 	WeixinUnionId sql.NullString `gorm:"size:63;unique_index"`
 	QqOpenId      sql.NullString `gorm:"size:63;unique_index"`
 	// Only store appToken because webTokens are short lived
-	AppToken    sql.NullString `gorm:"size:127"`
-	Role        appgo.Role
-	Nickname    sql.NullString `gorm:"size:63"`
-	Portrait    sql.NullString `gorm:"size:255"`
-	Sex         appgo.Sex
-	BannedUntil *time.Time
-	CreatedAt   time.Time
-	DeletedAt   *time.Time
+	AppToken     sql.NullString `gorm:"size:127"`
+	Role         appgo.Role
+	Platform     appgo.Platform
+	PushProvider sql.NullString `gorm:"size:16"`
+	PushToken    sql.NullString `gorm:"size:127"`
+	Nickname     sql.NullString `gorm:"size:63"`
+	Portrait     sql.NullString `gorm:"size:255"`
+	Sex          appgo.Sex
+	BannedUntil  *time.Time
+	CreatedAt    time.Time
+	DeletedAt    *time.Time
 }
 
 func (_ *UserModel) TableName() string {

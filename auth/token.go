@@ -12,7 +12,8 @@ import (
 
 type Token string
 
-func NewToken(userId appgo.Id, role appgo.Role, lifetime int) Token {
+func NewToken(userId appgo.Id, role appgo.Role) Token {
+	lifetime := tokenLifetime(role)
 	key := appgo.Conf.RootKey
 	expires := appgo.Id(time.Now().Add(time.Second * time.Duration(lifetime)).UnixNano())
 	parts := []string{userId.Base64(), strconv.Itoa(int(role)), expires.Base64()}
@@ -52,4 +53,17 @@ func (t Token) Validate() (appgo.Id, appgo.Role) {
 		return 0, 0
 	}
 	return userId, appgo.Role(roleInt)
+}
+
+func tokenLifetime(role appgo.Role) int {
+	switch role {
+	case appgo.RoleAppUser:
+		return appgo.Conf.TokenLifetime.AppUser
+	case appgo.RoleWebUser:
+		return appgo.Conf.TokenLifetime.WebUser
+	case appgo.RoleWebAdmin:
+		return appgo.Conf.TokenLifetime.WebAdmin
+	default:
+		return 0
+	}
 }

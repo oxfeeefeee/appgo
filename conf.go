@@ -51,6 +51,10 @@ var Conf struct {
 		Domain         string
 		DefaultExpires int
 	}
+	Umeng struct {
+		AppKey          string
+		AppMasterSecret string
+	}
 }
 
 func init() {
