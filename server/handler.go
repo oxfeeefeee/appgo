@@ -40,6 +40,10 @@ type handler struct {
 	ts       TokenStore
 }
 
+func init() {
+	decoder.IgnoreUnknownKeys(true)
+}
+
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f := h.funcs[r.Method]
 	var input reflect.Value
