@@ -123,6 +123,9 @@ func buildIosPayload(content *appgo.PushData) interface{} {
 			Body:  content.Message,
 		},
 	}
+	for k, v := range content.Custom {
+		ret[k] = v
+	}
 	return ret
 }
 
@@ -136,6 +139,7 @@ func buildAndroidPayload(content *appgo.PushData) interface{} {
 		Sound:     content.Sound,
 		PlaySound: len(content.Sound) > 0,
 		AfterOpen: "go_custom",
+		Custom:    content.Custom,
 	}
 	return ret
 }
