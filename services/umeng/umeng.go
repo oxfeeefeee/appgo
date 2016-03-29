@@ -1,12 +1,15 @@
 package umeng
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
+	"github.com/oxfeeefeee/appgo/toolkit/strutil"
 	"github.com/parnurzeal/gorequest"
 	"strings"
+	"time"
 )
 
 const (
@@ -15,9 +18,11 @@ const (
 )
 
 var (
-	appKey       string
-	masterSecret string
-	devMode      bool
+	androidAppKey string
+	androidSecret string
+	iosAppKey     string
+	iosSecret     string
+	devMode       bool
 )
 
 type AndroidBody struct {
@@ -67,9 +72,11 @@ type Data struct {
 
 type Umeng struct{}
 
-func Init() {
-	appKey = appgo.Conf.Umeng.AppKey
-	masterSecret = appgo.Conf.Umeng.AppMasterSecret
+func init() {
+	androidAppKey = appgo.Conf.Umeng.Android.AppKey
+	androidSecret = appgo.Conf.Umeng.Android.AppMasterSecret
+	iosAppKey = appgo.Conf.Umeng.Ios.AppKey
+	iosSecret = appgo.Conf.Umeng.Ios.AppMasterSecret
 	devMode = appgo.Conf.DevMode
 }
 
@@ -79,16 +86,19 @@ func (_ Umeng) Name() string {
 
 func (_ Umeng) PushNotif(platform appgo.Platform, tokens []string, content *appgo.PushData) {
 	var payload interface{}
+	var appkey, secret string
 	if platform == appgo.PlatformIos {
 		payload = buildIosPayload(content)
+		appkey, secret = iosAppKey, iosSecret
 	} else if platform == appgo.PlatformAndroid {
 		payload = buildAndroidPayload(content)
+		appkey, secret = androidAppKey, androidSecret
 	}
 	if payload == nil {
 		return
 	}
 	tokenstr := strings.Join(tokens, ",")
-	data := getAllData(tokenstr, payload)
+	data := getAllData(appkey, tokenstr, payload)
 	jdata, err := json.Marshal(data)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -96,7 +106,7 @@ func (_ Umeng) PushNotif(platform appgo.Platform, tokens []string, content *appg
 		}).Error("Failed to marshal umeng push request")
 		return
 	}
-	sig := sign(string(jdata), masterSecret)
+	sig := sign(string(jdata), secret)
 	request(string(jdata), sig)
 }
 
@@ -120,6 +130,7 @@ func buildAndroidPayload(content *appgo.PushData) interface{} {
 	ret := make(map[string]interface{})
 	ret["display_type"] = "notification"
 	ret["body"] = &AndroidBody{
+		Ticker:    content.Message,
 		Title:     content.Title,
 		Text:      content.Message,
 		Sound:     content.Sound,
@@ -129,23 +140,28 @@ func buildAndroidPayload(content *appgo.PushData) interface{} {
 	return ret
 }
 
-func getAllData(tokens string, payload interface{}) *Data {
+func getAllData(appkey, tokens string, payload interface{}) *Data {
 	return &Data{
-		AppKey:         appKey,
+		AppKey:         appkey,
+		Timestamp:      strutil.FromInt64(time.Now().Unix()),
 		DeviceTokens:   tokens,
 		Payload:        payload,
+		Type:           "listcast",
 		ProductionMode: !devMode,
 	}
 }
 
-func request(body, sign string) {
-	url := sendUrl + "?sign=" + sign
-	_, body, errs := gorequest.New().Post(url).Send(body).End()
+func request(body, sig string) {
+	url := sendUrl + "?sign=" + sig
+	req := gorequest.New().Post(url).Type("json")
+	req.RawString = body
+	req.BounceToRawString = true
+	_, ret, errs := req.End()
 	if errs != nil {
 		log.WithFields(log.Fields{
 			"errors": errs,
 			"url":    url,
-			"body":   body,
+			"body":   ret,
 		}).Error("Failed to request umeng push")
 	}
 }
@@ -153,5 +169,6 @@ func request(body, sign string) {
 func sign(body, secret string) string {
 	ss := []string{sendMethod, sendUrl, body, secret}
 	data := []byte(strings.Join(ss, ""))
-	return string(crypto.Md5(data))
+	s := hex.EncodeToString(crypto.Md5(data))
+	return s
 }

@@ -27,7 +27,7 @@ type QiniuParams struct {
 	DefaultExpires int
 }
 
-func Init() {
+func init() {
 	params := appgo.Conf.Qiniu
 	conf.ACCESS_KEY = params.AccessKey
 	conf.SECRET_KEY = params.Secret

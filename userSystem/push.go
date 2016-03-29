@@ -55,7 +55,7 @@ func (u *UserSystem) SetPushToken(id appgo.Id, platform appgo.Platform,
 
 func (u *UserSystem) GetPushTokens(ids []appgo.Id) (map[string]map[appgo.Platform][]string, error) {
 	var users []*UserModel
-	if err := u.db.Select("push_provider, push_token").
+	if err := u.db.Select("platform, push_provider, push_token").
 		Where("id in (?)", ids).Find(&users).Error; err != nil {
 		return nil, err
 	}

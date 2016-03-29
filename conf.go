@@ -52,8 +52,14 @@ var Conf struct {
 		DefaultExpires int
 	}
 	Umeng struct {
-		AppKey          string
-		AppMasterSecret string
+		Android struct {
+			AppKey          string
+			AppMasterSecret string
+		}
+		Ios struct {
+			AppKey          string
+			AppMasterSecret string
+		}
 	}
 }
 
