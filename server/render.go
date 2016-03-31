@@ -11,8 +11,9 @@ var renderer *render.Render
 
 func init() {
 	renderer = render.New(render.Options{
-		Directory:  appgo.Conf.TemplatePath,
-		IndentJSON: appgo.Conf.DevMode,
+		Directory:     appgo.Conf.TemplatePath,
+		IndentJSON:    appgo.Conf.DevMode,
+		IsDevelopment: appgo.Conf.DevMode,
 	})
 }
 
