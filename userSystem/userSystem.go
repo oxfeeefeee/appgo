@@ -358,5 +358,7 @@ func initTable(db *gorm.DB) {
 				}).Infoln("failed to alter user table AUTO_INCREMENT")
 			}
 		}
+	} else {
+		db.AutoMigrate(&user)
 	}
 }
