@@ -6,10 +6,11 @@ import (
 )
 
 var Conf struct {
-	DevMode  bool
-	LogLevel log.Level
-	RootKey  string
-	Mysql    struct {
+	DevMode      bool
+	LogLevel     log.Level
+	RootKey      string
+	TemplatePath string
+	Mysql        struct {
 		Host     string
 		Port     string
 		User     string

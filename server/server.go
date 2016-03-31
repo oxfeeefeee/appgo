@@ -27,10 +27,17 @@ func NewServer(ts TokenStore) *Server {
 	}
 }
 
-func (s *Server) AddRest(path string, rest []interface{}) {
-	for _, api := range rest {
-		h := newHandler(api, s.ts)
+func (s *Server) AddRest(path string, rests []interface{}) {
+	for _, api := range rests {
+		h := newHandler(api, HandlerTypeJson, s.ts)
 		s.Handle(path+h.path, h).Methods(h.supports...)
+	}
+}
+
+func (s *Server) AddHtml(path string, htmls []interface{}) {
+	for _, api := range htmls {
+		h := newHandler(api, HandlerTypeHtml, s.ts)
+		s.Handle(path+h.path, h).Methods("GET")
 	}
 }
 

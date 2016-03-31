@@ -19,7 +19,15 @@ const (
 	ContentFieldName     = "Content__"
 )
 
+const (
+	_ HandlerType = iota
+	HandlerTypeJson
+	HandlerTypeHtml
+)
+
 var decoder = schema.NewDecoder()
+
+type HandlerType int
 
 type httpFunc struct {
 	requireAuth    bool
@@ -34,7 +42,9 @@ type httpFunc struct {
 }
 
 type handler struct {
+	htype    HandlerType
 	path     string
+	template string
 	funcs    map[string]*httpFunc
 	supports []string
 	ts       TokenStore
@@ -52,7 +62,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		input = reflect.New(f.inputType)
 		if err := decoder.Decode(input.Interface(), r.URL.Query()); err != nil {
-			renderError(w, appgo.NewApiErr(appgo.ECodeBadRequest, err.Error()))
+			h.renderError(w, appgo.NewApiErr(appgo.ECodeBadRequest, err.Error()))
 			return
 		}
 	}
@@ -64,7 +74,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if f.allowAnonymous {
 				field.SetInt(appgo.AnonymousId)
 			} else {
-				renderError(w, appgo.NewApiErr(
+				h.renderError(w, appgo.NewApiErr(
 					appgo.ECodeUnauthorized,
 					"either remove UserId__ in your input define, or add allowAnonymous tag",
 				))
@@ -78,7 +88,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s := input.Elem()
 		f := s.FieldByName(AdminUserIdFieldName)
 		if user == 0 || role != appgo.RoleWebAdmin {
-			renderError(w, appgo.NewApiErr(
+			h.renderError(w, appgo.NewApiErr(
 				appgo.ECodeUnauthorized,
 				"admin role required, you could remove AdminUserId__ in your input define"))
 			return
@@ -89,7 +99,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := appgo.IdFromStr(vars["id"])
 		if id == 0 {
-			renderError(w, appgo.NewApiErr(
+			h.renderError(w, appgo.NewApiErr(
 				appgo.ECodeNotFound,
 				"ResourceId ('{id}' in url) required, you could remove ResourceId__ in your input define"))
 			return
@@ -101,7 +111,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if f.hasContent {
 		content := reflect.New(f.contentType.Elem())
 		if err := json.NewDecoder(r.Body).Decode(content.Interface()); err != nil {
-			renderError(w, appgo.NewApiErr(appgo.ECodeBadRequest, err.Error()))
+			h.renderError(w, appgo.NewApiErr(appgo.ECodeBadRequest, err.Error()))
 			return
 		}
 		s := input.Elem()
@@ -111,7 +121,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	argsIn := []reflect.Value{input}
 	returns := f.funcValue.Call(argsIn)
 	if len(returns) == 0 || len(returns) > 2 {
-		renderError(w, appgo.NewApiErr(appgo.ECodeInternal, "Bad api-func format"))
+		h.renderError(w, appgo.NewApiErr(appgo.ECodeInternal, "Bad api-func format"))
 		return
 	}
 	// Either returns (reply, error) or returns (error)
@@ -124,16 +134,36 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// First check is err is nil
 	if retErr.IsNil() {
 		if len(returns) == 2 {
-			renderJSON(w, returns[0].Interface())
+			h.renderData(w, returns[0].Interface())
 		} else { // Empty return
-			renderJSON(w, map[string]string{})
+			h.renderData(w, map[string]string{})
 		}
 	} else {
 		if aerr, ok := retErr.Interface().(*appgo.ApiError); !ok {
 			aerr = appgo.NewApiErr(appgo.ECodeInternal, "Bad api-func format")
 		} else {
-			renderError(w, aerr)
+			h.renderError(w, aerr)
 		}
+	}
+}
+
+func (h *handler) renderData(w http.ResponseWriter, v interface{}) {
+	if h.htype == HandlerTypeJson {
+		renderJSON(w, v)
+	} else if h.htype == HandlerTypeHtml {
+		renderHtml(w, h.template, v)
+	} else {
+		panic("Bad handler type")
+	}
+}
+
+func (h *handler) renderError(w http.ResponseWriter, err *appgo.ApiError) {
+	if h.htype == HandlerTypeJson {
+		renderJsonError(w, err)
+	} else if h.htype == HandlerTypeHtml {
+		renderHtmlError(w, err)
+	} else {
+		panic("Bad handler type")
 	}
 }
 
@@ -149,34 +179,55 @@ func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
 	return user, role
 }
 
-func newHandler(funcSet interface{}, ts TokenStore) *handler {
+func newHandler(funcSet interface{}, htype HandlerType, ts TokenStore) *handler {
 	funcs := make(map[string]*httpFunc)
 	// Let if panic if funSet's type is not right
 	path := ""
+	template := ""
 	t := reflect.TypeOf(funcSet).Elem()
 	if field, ok := t.FieldByName("META"); !ok {
-		log.Panicln("Bad API path")
-	} else if p := field.Tag.Get("path"); p == "" {
-		log.Panicln("Empty API path")
+		log.Panicln("Bad META setting (path, template)")
 	} else {
-		path = p
-	}
-
-	structVal := reflect.Indirect(reflect.ValueOf(funcSet))
-	methods := []string{"GET", "POST", "PUT", "DELETE"}
-	supports := make([]string, 0, 4)
-	for _, m := range methods {
-		if fun, err := newHttpFunc(structVal, m); err != nil {
-			log.Panicln(err)
-		} else if fun != nil {
-			funcs[m] = fun
-			supports = append(supports, m)
+		if p := field.Tag.Get("path"); p == "" {
+			log.Panicln("Empty API path")
+		} else {
+			path = p
+		}
+		if htype == HandlerTypeHtml {
+			if t := field.Tag.Get("template"); t == "" {
+				log.Panicln("Empty HTML template")
+			} else {
+				template = t
+			}
 		}
 	}
-	if len(supports) == 0 {
-		log.Panicln("API supports no HTTP method")
+	structVal := reflect.Indirect(reflect.ValueOf(funcSet))
+	supports := make([]string, 0, 4)
+	if htype == HandlerTypeJson {
+		methods := []string{"GET", "POST", "PUT", "DELETE"}
+		for _, m := range methods {
+			if fun, err := newHttpFunc(structVal, m); err != nil {
+				log.Panicln(err)
+			} else if fun != nil {
+				funcs[m] = fun
+				supports = append(supports, m)
+			}
+		}
+		if len(supports) == 0 {
+			log.Panicln("API supports no HTTP method")
+		}
+	} else if htype == HandlerTypeHtml {
+		if fun, err := newHttpFunc(structVal, "HTML"); err != nil {
+			log.Panicln(err)
+		} else if fun == nil {
+			log.Panicln("No HTML function for html")
+		} else {
+			funcs["GET"] = fun
+		}
+	} else {
+		log.Panicln("Bad handler type")
 	}
-	return &handler{path, funcs, supports, ts}
+	return &handler{htype, path, template, funcs, supports, ts}
 }
 
 func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {

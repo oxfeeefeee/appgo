@@ -11,6 +11,7 @@ var renderer *render.Render
 
 func init() {
 	renderer = render.New(render.Options{
+		Directory:  appgo.Conf.TemplatePath,
 		IndentJSON: appgo.Conf.DevMode,
 	})
 }
@@ -25,6 +26,20 @@ func renderJSON(w http.ResponseWriter, v interface{}) {
 	}
 }
 
-func renderError(w http.ResponseWriter, err *appgo.ApiError) {
+func renderJsonError(w http.ResponseWriter, err *appgo.ApiError) {
 	renderJSON(w, err)
+}
+
+func renderHtml(w http.ResponseWriter, template string, data interface{}) {
+	err := renderer.HTML(w, http.StatusOK, template, data)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"data":  data,
+		}).Error("Error rendering html")
+	}
+}
+
+func renderHtmlError(w http.ResponseWriter, err *appgo.ApiError) {
+	renderHtml(w, "content", err)
 }
