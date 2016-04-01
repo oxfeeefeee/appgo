@@ -41,13 +41,12 @@ func (s *Server) AddHtml(path string, htmls []interface{}) {
 	}
 }
 
-func (s *Server) AddStatic(path, fileDir string) {
-	s.PathPrefix(path).Handler(http.StripPrefix(path, http.FileServer(http.Dir(fileDir))))
+func (s *Server) AddProxy(path string, handler http.Handler) {
+	s.PathPrefix(path).Handler(http.StripPrefix(path, handler))
 }
 
-func (s *Server) AddHandler(path string,
-	f func(w http.ResponseWriter, s *http.Request)) {
-	s.HandleFunc(path, f)
+func (s *Server) AddStatic(path, fileDir string) {
+	s.AddProxy(path, http.FileServer(http.Dir(fileDir)))
 }
 
 func (s *Server) Serve() {
