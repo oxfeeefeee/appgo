@@ -46,7 +46,7 @@ func GetAccessToken(params *AccessTokenParams) *AccessTokenResult {
 		apiError
 	}
 	url := accessTokenUrl(params)
-	_, body, errs := gorequest.New().Get(url).End()
+	_, body, errs := gorequest.New().Get(url).EndBytes()
 	if errs != nil {
 		log.WithFields(log.Fields{
 			"errors": errs,
@@ -54,7 +54,7 @@ func GetAccessToken(params *AccessTokenParams) *AccessTokenResult {
 		}).Error("Failed to get access token")
 		return nil
 	}
-	if err := json.Unmarshal([]byte(body), &result); err != nil {
+	if err := json.Unmarshal(body, &result); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 			"body":  string(body),
@@ -76,7 +76,7 @@ func GetUserInfo(id, token string) *UserInfo {
 		apiError
 	}
 	url := userInfoUrl(id, token)
-	_, body, errs := gorequest.New().Get(url).End()
+	_, body, errs := gorequest.New().Get(url).EndBytes()
 	if errs != nil {
 		log.WithFields(log.Fields{
 			"errors": errs,
@@ -84,7 +84,7 @@ func GetUserInfo(id, token string) *UserInfo {
 		}).Error("Failed to get user info")
 		return nil
 	}
-	if err := json.Unmarshal([]byte(body), &uinfo); err != nil {
+	if err := json.Unmarshal(body, &uinfo); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 			"body":  string(body),
