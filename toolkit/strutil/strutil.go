@@ -77,10 +77,29 @@ func ToIdList(str string) []appgo.Id {
 	return v
 }
 
+func ToStrList(str string) []string {
+	if len(str) <= 1 {
+		return nil
+	} else if str == "null" {
+		return nil
+	}
+	var v []string
+	json.Unmarshal([]byte(str), &v)
+	return v
+}
+
 func FromIdList(ids []appgo.Id) string {
 	if ids == nil {
 		return "[]"
 	}
 	data, _ := json.Marshal(&ids)
+	return string(data)
+}
+
+func FromStrList(strs []string) string {
+	if strs == nil {
+		return "[]"
+	}
+	data, _ := json.Marshal(&strs)
 	return string(data)
 }
