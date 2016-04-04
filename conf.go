@@ -3,6 +3,8 @@ package appgo
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
+	"os"
+	"path/filepath"
 )
 
 var Conf struct {
@@ -64,12 +66,27 @@ var Conf struct {
 	}
 }
 
-func init() {
-	err := configor.Load(&Conf, "./conf/appgo.yml")
+func initConfig() {
+	filePath := searchConfigFile()
+	err := configor.Load(&Conf, filePath)
 	if err != nil {
 		log.WithField("error", err).Panicln("Failed to load config file")
 	}
 	if len(Conf.RootKey) != 16 {
 		log.Println("bad root key size")
 	}
+}
+
+func searchConfigFile() string {
+	// Search up for config file
+	left, upALevel, right, result := "./", "../", "conf/appgo.yml", ""
+	for i := 0; i < 5; i++ {
+		p := filepath.Join(left, right)
+		if _, err := os.Stat(p); err == nil {
+			result = p
+			break
+		}
+		left = filepath.Join(left, upALevel)
+	}
+	return result
 }

@@ -76,3 +76,8 @@ type Pusher interface {
 	Name() string
 	PushNotif(platform Platform, tokens []string, content *PushData)
 }
+
+func init() {
+	initConfig()
+	initLog()
+}
