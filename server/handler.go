@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/schema"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
+	"github.com/unrolled/render"
 	"net/http"
 	"reflect"
 )
@@ -48,6 +49,7 @@ type handler struct {
 	funcs    map[string]*httpFunc
 	supports []string
 	ts       TokenStore
+	renderer *render.Render
 }
 
 func init() {
@@ -147,26 +149,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *handler) renderData(w http.ResponseWriter, v interface{}) {
-	if h.htype == HandlerTypeJson {
-		renderJSON(w, v)
-	} else if h.htype == HandlerTypeHtml {
-		renderHtml(w, h.template, v)
-	} else {
-		panic("Bad handler type")
-	}
-}
-
-func (h *handler) renderError(w http.ResponseWriter, err *appgo.ApiError) {
-	if h.htype == HandlerTypeJson {
-		renderJsonError(w, err)
-	} else if h.htype == HandlerTypeHtml {
-		renderHtmlError(w, err)
-	} else {
-		panic("Bad handler type")
-	}
-}
-
 func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
 	token := auth.Token(r.Header.Get(appgo.CustomTokenHeaderName))
 	user, role := token.Validate()
@@ -179,7 +161,8 @@ func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
 	return user, role
 }
 
-func newHandler(funcSet interface{}, htype HandlerType, ts TokenStore) *handler {
+func newHandler(funcSet interface{}, htype HandlerType,
+	ts TokenStore, renderer *render.Render) *handler {
 	funcs := make(map[string]*httpFunc)
 	// Let if panic if funSet's type is not right
 	path := ""
@@ -227,7 +210,7 @@ func newHandler(funcSet interface{}, htype HandlerType, ts TokenStore) *handler 
 	} else {
 		log.Panicln("Bad handler type")
 	}
-	return &handler{htype, path, template, funcs, supports, ts}
+	return &handler{htype, path, template, funcs, supports, ts, renderer}
 }
 
 func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {

@@ -3,22 +3,31 @@ package server
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
-	"github.com/unrolled/render"
 	"net/http"
 )
 
-var renderer *render.Render
-
-func init() {
-	renderer = render.New(render.Options{
-		Directory:     appgo.Conf.TemplatePath,
-		IndentJSON:    appgo.Conf.DevMode,
-		IsDevelopment: appgo.Conf.DevMode,
-	})
+func (h *handler) renderData(w http.ResponseWriter, v interface{}) {
+	if h.htype == HandlerTypeJson {
+		h.renderJSON(w, v)
+	} else if h.htype == HandlerTypeHtml {
+		h.renderHtml(w, h.template, v)
+	} else {
+		panic("Bad handler type")
+	}
 }
 
-func renderJSON(w http.ResponseWriter, v interface{}) {
-	err := renderer.JSON(w, http.StatusOK, v)
+func (h *handler) renderError(w http.ResponseWriter, err *appgo.ApiError) {
+	if h.htype == HandlerTypeJson {
+		h.renderJSON(w, err)
+	} else if h.htype == HandlerTypeHtml {
+		h.renderHtml(w, "content", err)
+	} else {
+		panic("Bad handler type")
+	}
+}
+
+func (h *handler) renderJSON(w http.ResponseWriter, v interface{}) {
+	err := h.renderer.JSON(w, http.StatusOK, v)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -27,20 +36,12 @@ func renderJSON(w http.ResponseWriter, v interface{}) {
 	}
 }
 
-func renderJsonError(w http.ResponseWriter, err *appgo.ApiError) {
-	renderJSON(w, err)
-}
-
-func renderHtml(w http.ResponseWriter, template string, data interface{}) {
-	err := renderer.HTML(w, http.StatusOK, template, data)
+func (h *handler) renderHtml(w http.ResponseWriter, template string, data interface{}) {
+	err := h.renderer.HTML(w, http.StatusOK, template, data)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 			"data":  data,
 		}).Error("Error rendering html")
 	}
-}
-
-func renderHtmlError(w http.ResponseWriter, err *appgo.ApiError) {
-	renderHtml(w, "content", err)
 }

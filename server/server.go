@@ -8,6 +8,8 @@ import (
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
 	"github.com/rs/cors"
+	"github.com/unrolled/render"
+	"html/template"
 	"net/http"
 	"strings"
 )
@@ -28,15 +30,24 @@ func NewServer(ts TokenStore) *Server {
 }
 
 func (s *Server) AddRest(path string, rests []interface{}) {
+	renderer := render.New(render.Options{
+		IndentJSON:    appgo.Conf.DevMode,
+		IsDevelopment: appgo.Conf.DevMode,
+	})
 	for _, api := range rests {
-		h := newHandler(api, HandlerTypeJson, s.ts)
+		h := newHandler(api, HandlerTypeJson, s.ts, renderer)
 		s.Handle(path+h.path, h).Methods(h.supports...)
 	}
 }
 
-func (s *Server) AddHtml(path string, htmls []interface{}) {
+func (s *Server) AddHtml(path string, htmls []interface{}, funcs []template.FuncMap) {
+	renderer := render.New(render.Options{
+		Directory:     appgo.Conf.TemplatePath,
+		Funcs:         funcs,
+		IsDevelopment: appgo.Conf.DevMode,
+	})
 	for _, api := range htmls {
-		h := newHandler(api, HandlerTypeHtml, s.ts)
+		h := newHandler(api, HandlerTypeHtml, s.ts, renderer)
 		s.Handle(path+h.path, h).Methods("GET")
 	}
 }
