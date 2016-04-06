@@ -19,11 +19,14 @@ import (
 
 var U *UserSystem
 
+type OnCreatedCallback func(id appgo.Id) error
+
 type UserSystem struct {
 	db            *gorm.DB
 	tableName     string
 	Pushers       map[string]appgo.Pusher
 	DefaultPusher appgo.Pusher
+	OnCreated     OnCreatedCallback
 	appgo.MobileMsgSender
 	appgo.KvStore
 }
@@ -33,6 +36,7 @@ type UserSystemSettings struct {
 	Pushers         []appgo.Pusher
 	MobileMsgSender appgo.MobileMsgSender
 	KvStore         appgo.KvStore
+	OnCreated       OnCreatedCallback
 }
 
 type UserData struct {
@@ -71,6 +75,7 @@ func Init(db *gorm.DB, settings UserSystemSettings) *UserSystem {
 		settings.TableName,
 		pushers,
 		&defaultPusher{},
+		settings.OnCreated,
 		sender,
 		store,
 	}
@@ -155,7 +160,7 @@ func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err err
 		Portrait:      database.SqlStr(imageName),
 		Sex:           sex,
 	}
-	return saveUser(u.db, user)
+	return u.saveUser(user)
 }
 
 func (u *UserSystem) GetWeiboUser(openId string) (uid appgo.Id, err error) {
@@ -179,7 +184,7 @@ func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error
 		Portrait: database.SqlStr(imageName),
 		Sex:      sex,
 	}
-	return saveUser(u.db, user)
+	return u.saveUser(user)
 }
 
 func (u *UserSystem) GetQqUser(openId string) (uid appgo.Id, err error) {
@@ -203,7 +208,7 @@ func (u *UserSystem) AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error) {
 		Portrait: database.SqlStr(imageName),
 		Sex:      sex,
 	}
-	return saveUser(u.db, user)
+	return u.saveUser(user)
 }
 
 func (u *UserSystem) GetMobileUser(mobile, password string) (uid appgo.Id, err error) {
@@ -235,7 +240,7 @@ func (u *UserSystem) AddMobileUser(info *auth.MobileUserInfo) (appgo.Id, error) 
 			Nickname:     database.SqlStr(info.Nickname),
 			Sex:          info.Sex,
 		}
-		return saveUser(u.db, user)
+		return u.saveUser(user)
 	}
 }
 
@@ -271,6 +276,16 @@ func (u *UserSystem) UpdateAppToken(id appgo.Id, role appgo.Role) (string, error
 		return "", appgo.InternalErr
 	}
 	return tk.String, nil
+}
+
+func (u *UserSystem) saveUser(user *UserModel) (appgo.Id, error) {
+	if db := u.db.Save(user); db.Error != nil {
+		return 0, db.Error
+	}
+	if u.OnCreated != nil {
+		return user.Id, u.OnCreated(user.Id)
+	}
+	return user.Id, nil
 }
 
 func dbModelToData(model *UserModel) *UserData {
@@ -329,13 +344,6 @@ func getUser(db *gorm.DB, where *UserModel) (appgo.Id, error) {
 		if db.RecordNotFound() {
 			return 0, nil
 		}
-		return 0, db.Error
-	}
-	return user.Id, nil
-}
-
-func saveUser(db *gorm.DB, user *UserModel) (appgo.Id, error) {
-	if db := db.Save(user); db.Error != nil {
 		return 0, db.Error
 	}
 	return user.Id, nil
