@@ -20,6 +20,13 @@ var Conf struct {
 		DbName   string
 		Charset  string
 	}
+	Redis struct {
+		Host        string
+		Port        string
+		Password    string
+		MaxIdle     int
+		IdleTimeout int
+	}
 	Negroni struct {
 		Port string
 	}
