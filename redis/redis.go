@@ -11,8 +11,6 @@ var (
 	pool *redigo.Pool
 )
 
-type ObjReader func(key interface{}) (string, error)
-
 func init() {
 	c := &appgo.Conf.Redis
 	url := fmt.Sprintf("redis://%s:%s", c.Host, c.Port)
