@@ -31,6 +31,7 @@ func NewServer(ts TokenStore) *Server {
 
 func (s *Server) AddRest(path string, rests []interface{}) {
 	renderer := render.New(render.Options{
+		Directory:     "N/A",
 		IndentJSON:    appgo.Conf.DevMode,
 		IsDevelopment: appgo.Conf.DevMode,
 	})
@@ -40,10 +41,10 @@ func (s *Server) AddRest(path string, rests []interface{}) {
 	}
 }
 
-func (s *Server) AddHtml(path string, htmls []interface{}, funcs []template.FuncMap) {
+func (s *Server) AddHtml(path string, htmls []interface{}, funcs template.FuncMap) {
 	renderer := render.New(render.Options{
 		Directory:     appgo.Conf.TemplatePath,
-		Funcs:         funcs,
+		Funcs:         []template.FuncMap{funcs},
 		IsDevelopment: appgo.Conf.DevMode,
 	})
 	for _, api := range htmls {
