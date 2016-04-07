@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"errors"
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
 	"github.com/oxfeeefeee/appgo"
@@ -9,6 +10,10 @@ import (
 
 var (
 	pool *redigo.Pool
+)
+
+var (
+	ErrNotFound = errors.New("value not found")
 )
 
 func init() {
