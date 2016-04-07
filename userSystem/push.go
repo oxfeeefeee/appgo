@@ -13,9 +13,9 @@ const (
 
 func (u *UserSystem) PushTo(users []appgo.Id, content *appgo.PushData) {
 	doPush := func(ids []appgo.Id) {
-		if tokens, err := u.GetPushTokens(users); err != nil {
+		if tokens, err := u.GetPushTokens(ids); err != nil {
 			log.WithFields(log.Fields{
-				"users": users,
+				"users": ids,
 				"error": err,
 			}).Errorln("failed to GetPushTokens")
 		} else {
