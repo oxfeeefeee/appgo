@@ -160,13 +160,21 @@ func request(body, sig string) {
 	req := gorequest.New().Post(url).Type("json")
 	req.RawString = body
 	req.BounceToRawString = true
-	_, ret, errs := req.End()
+	_, ret, errs := req.EndBytes()
 	if errs != nil {
 		log.WithFields(log.Fields{
 			"errors": errs,
 			"url":    url,
 			"body":   ret,
 		}).Error("Failed to request umeng push")
+	}
+	retval := struct {
+		Ret  string      `json:"ret"`
+		Data interface{} `json:"data"`
+	}{}
+	json.Unmarshal(ret, &retval)
+	if retval.Ret != "SUCCESS" {
+		log.WithField("error", retval.Data).Error("Umeng push returns error")
 	}
 }
 
