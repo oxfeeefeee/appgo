@@ -42,6 +42,10 @@ func init() {
 	}
 }
 
+func Domain() string {
+	return domain
+}
+
 func GetUrl(key string, expiryUnix int64, params string) string {
 	baseUrl := makeBaseUrl(key)
 	url := baseUrl + "?" + params
