@@ -18,6 +18,7 @@ const (
 	AdminUserIdFieldName = "AdminUserId__"
 	ResIdFieldName       = "ResourceId__"
 	ContentFieldName     = "Content__"
+	RequestFieldName     = "Request__"
 )
 
 const (
@@ -35,6 +36,7 @@ type httpFunc struct {
 	requireAdmin   bool
 	hasResId       bool
 	hasContent     bool
+	hasRequest     bool
 	dummyInput     bool
 	allowAnonymous bool
 	inputType      reflect.Type
@@ -119,6 +121,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s := input.Elem()
 		f := s.FieldByName(ContentFieldName)
 		f.Set(content)
+	}
+	if f.hasRequest {
+		s := input.Elem()
+		f := s.FieldByName(RequestFieldName)
+		f.Set(reflect.ValueOf(r))
 	}
 	argsIn := []reflect.Value{input}
 	returns := f.funcValue.Call(argsIn)
@@ -265,6 +272,16 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 			return nil, errors.New("Content needs to be a pointer")
 		}
 	}
-	return &httpFunc{requireAuth, requireAdmin, hasResId, hasContent,
+	hasRequest := false
+	if ctype, ok := inputType.FieldByName(RequestFieldName); ok {
+		hasRequest = true
+		if ctype.Type.Kind() != reflect.Ptr {
+			return nil, errors.New("Request needs to be a pointer to http.Request")
+		}
+		if ctype.Type.Elem() != reflect.TypeOf((*http.Request)(nil)).Elem() {
+			return nil, errors.New("Request needs to be a pointer to http.Request")
+		}
+	}
+	return &httpFunc{requireAuth, requireAdmin, hasResId, hasContent, hasRequest,
 		dummyInput, allowAnonymous, inputType, contentType, fieldVal}, nil
 }
