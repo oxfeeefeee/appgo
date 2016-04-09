@@ -61,6 +61,14 @@ func (s *Server) AddStatic(path, fileDir string) {
 	s.AddProxy(path, http.FileServer(http.Dir(fileDir)))
 }
 
+func (s *Server) AddAppleAppSiteAsso(content []byte) {
+	f := func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Write(content)
+	}
+	s.HandleFunc("/.well-known/apple-app-site-association", f)
+}
+
 func (s *Server) Serve() {
 	n := negroni.New()
 	n.Use(negroni.NewRecovery())
