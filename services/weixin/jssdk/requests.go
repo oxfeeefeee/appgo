@@ -64,11 +64,11 @@ func getToken() string {
 	token.RLock()
 	if token.expiresAt.Before(now) {
 		token.RUnlock()
-		doGetToken()
+		return doGetToken()
 	} else if token.refreshAt.Before(now) {
-		token.RUnlock()
 		go doGetToken()
 	}
+	defer token.RUnlock()
 	return token.accessToken
 }
 
@@ -77,15 +77,15 @@ func getTicket() string {
 	ticket.RLock()
 	if ticket.expiresAt.Before(now) {
 		ticket.RUnlock()
-		doGetTicket()
+		return doGetTicket()
 	} else if ticket.refreshAt.Before(now) {
-		ticket.RUnlock()
 		go doGetTicket()
 	}
+	defer ticket.RUnlock()
 	return ticket.ticket
 }
 
-func doGetToken() {
+func doGetToken() string {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorln("doGetToken paniced: ", r)
@@ -98,7 +98,7 @@ func doGetToken() {
 			"errors": errs,
 			"url":    url,
 		}).Error("Request weixin token error")
-		return
+		return ""
 	}
 	var ret accessTokenReturn
 	if err := json.Unmarshal(data, &ret); err != nil {
@@ -106,21 +106,22 @@ func doGetToken() {
 			"error": err,
 			"body":  string(data),
 		}).Error("Failed to unmarshal access token result")
-		return
+		return ""
 	} else if ret.AccessToken == "" {
 		log.WithFields(log.Fields{
 			"code": ret.ErrCode,
 			"msg":  ret.ErrMsg,
 		}).Errorf("weixin token return error")
-		return
+		return ""
 	}
 	token.Lock()
 	defer token.Unlock()
 	token.accessToken = ret.AccessToken
 	token.expiresAt, token.refreshAt = expireConv(ret.ExpiresIn)
+	return token.accessToken
 }
 
-func doGetTicket() {
+func doGetTicket() string {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorln("doGetTicket paniced: ", r)
@@ -134,7 +135,7 @@ func doGetTicket() {
 			"errors": errs,
 			"url":    url,
 		}).Error("Request weixin ticket error")
-		return
+		return ""
 	}
 	var ret ticketReturn
 	if err := json.Unmarshal(data, &ret); err != nil {
@@ -142,18 +143,19 @@ func doGetTicket() {
 			"error": err,
 			"body":  string(data),
 		}).Error("Failed to unmarshal weixin ticket result")
-		return
+		return ""
 	} else if ret.Ticket == "" {
 		log.WithFields(log.Fields{
 			"code": ret.ErrCode,
 			"msg":  ret.ErrMsg,
 		}).Errorf("weixin ticket return error")
-		return
+		return ""
 	}
 	ticket.Lock()
 	defer ticket.Unlock()
 	ticket.ticket = ret.Ticket
 	ticket.expiresAt, ticket.refreshAt = expireConv(ret.ExpiresIn)
+	return ticket.ticket
 }
 
 func expireConv(expIn int) (time.Time, time.Time) {

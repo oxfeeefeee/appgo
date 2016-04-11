@@ -25,8 +25,8 @@ type WxConfig struct {
 }
 
 func init() {
-	appId = appgo.Conf.Weixin.AppId
-	appSecret = appgo.Conf.Weixin.Secret
+	appId = appgo.Conf.WeixinJssdk.AppId
+	appSecret = appgo.Conf.WeixinJssdk.Secret
 }
 
 func GetConfig(url string) *WxConfig {

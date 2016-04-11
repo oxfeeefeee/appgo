@@ -46,6 +46,10 @@ var Conf struct {
 		AppId  string
 		Secret string
 	}
+	WeixinJssdk struct {
+		AppId  string
+		Secret string
+	}
 	Weibo struct {
 		AppId       string
 		Secret      string
