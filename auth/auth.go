@@ -19,6 +19,7 @@ var (
 	weiboSupport  WeiboSupport
 	qqSupport     QqSupport
 	mobileSupport MobileSupport
+	oauthSupport  OAuthSupport
 )
 
 type LoginResult struct {
@@ -50,13 +51,20 @@ type QqSupport interface {
 	AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error)
 }
 
+type OAuthSupport interface {
+	GetOAuthUser(index int, id string) (uid appgo.Id, err error)
+	GetOAuthUserInfo(index int, code string) (interface{}, string, error)
+	AddOAuthUser(index int, id string, info interface{}) (uid appgo.Id, err error)
+}
+
 func Init(us UserSystem, wx WeixinSupport, wb WeiboSupport,
-	qqsp QqSupport, mobile MobileSupport) {
+	qqsp QqSupport, mobile MobileSupport, oauth OAuthSupport) {
 	userSystem = us
 	weixinSupport = wx
 	weiboSupport = wb
 	qqSupport = qqsp
 	mobileSupport = mobile
+	oauthSupport = oauth
 	if wx != nil {
 		weixinAppInfo = &weixin.AppInfo{
 			appgo.Conf.Weixin.AppId,
@@ -161,6 +169,27 @@ func LoginByQq(openId, token string, role appgo.Role) (*LoginResult, error) {
 			return nil, errors.New("Failed to get qq user info")
 		}
 		uid, err = qqSupport.AddQqUser(winfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return checkIn(uid, role)
+}
+
+func LoginByOAuth(code string, index int, role appgo.Role) (*LoginResult, error) {
+	if oauthSupport == nil {
+		return nil, errors.New("OAuth login not supported")
+	}
+	info, id, err := oauthSupport.GetOAuthUserInfo(index, code)
+	if err != nil {
+		return nil, err
+	}
+	uid, err := oauthSupport.GetOAuthUser(index, id)
+	if err != nil {
+		return nil, err
+	}
+	if uid == 0 {
+		uid, err = oauthSupport.AddOAuthUser(index, id, info)
 		if err != nil {
 			return nil, err
 		}

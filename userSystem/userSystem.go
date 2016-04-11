@@ -21,12 +21,15 @@ var U *UserSystem
 
 type OnCreatedCallback func(id appgo.Id) error
 
+type UserDataFromOAuthCode func(code string) (*UserData, string, error)
+
 type UserSystem struct {
 	db            *gorm.DB
 	tableName     string
 	Pushers       map[string]appgo.Pusher
 	DefaultPusher appgo.Pusher
 	OnCreated     OnCreatedCallback
+	OAuths        []UserDataFromOAuthCode
 	appgo.MobileMsgSender
 	appgo.KvStore
 }
@@ -37,6 +40,7 @@ type UserSystemSettings struct {
 	MobileMsgSender appgo.MobileMsgSender
 	KvStore         appgo.KvStore
 	OnCreated       OnCreatedCallback
+	OAuths          []UserDataFromOAuthCode
 }
 
 type UserData struct {
@@ -76,6 +80,7 @@ func Init(db *gorm.DB, settings UserSystemSettings) *UserSystem {
 		pushers,
 		&defaultPusher{},
 		settings.OnCreated,
+		settings.OAuths,
 		sender,
 		store,
 	}
@@ -84,7 +89,7 @@ func Init(db *gorm.DB, settings UserSystemSettings) *UserSystem {
 	if settings.MobileMsgSender == nil || settings.KvStore == nil {
 		mobileSupport = nil
 	}
-	auth.Init(U, U, U, U, mobileSupport)
+	auth.Init(U, U, U, U, mobileSupport, U)
 	return U
 }
 
@@ -139,12 +144,12 @@ func (u *UserSystem) UpdatePushInfo(id appgo.Id, pushInfo *appgo.PushInfo) error
 	return nil
 }
 
-func (u *UserSystem) GetWeixinUser(unionId string) (uid appgo.Id, err error) {
+func (u *UserSystem) GetWeixinUser(unionId string) (appgo.Id, error) {
 	return getUser(u.db, &UserModel{
 		WeixinUnionId: database.SqlStr(unionId)})
 }
 
-func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err error) {
+func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (appgo.Id, error) {
 	sex := appgo.SexDefault
 	if info.Sex == 1 {
 		sex = appgo.SexMale
@@ -163,12 +168,12 @@ func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err err
 	return u.saveUser(user)
 }
 
-func (u *UserSystem) GetWeiboUser(openId string) (uid appgo.Id, err error) {
+func (u *UserSystem) GetWeiboUser(openId string) (appgo.Id, error) {
 	return getUser(u.db, &UserModel{
 		WeiboId: database.SqlStr(openId)})
 }
 
-func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error) {
+func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (appgo.Id, error) {
 	sex := appgo.SexDefault
 	if info.Sex == "m" {
 		sex = appgo.SexMale
@@ -187,12 +192,12 @@ func (u *UserSystem) AddWeiboUser(info *weibo.UserInfo) (uid appgo.Id, err error
 	return u.saveUser(user)
 }
 
-func (u *UserSystem) GetQqUser(openId string) (uid appgo.Id, err error) {
+func (u *UserSystem) GetQqUser(openId string) (appgo.Id, error) {
 	return getUser(u.db, &UserModel{
 		QqOpenId: database.SqlStr(openId)})
 }
 
-func (u *UserSystem) AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error) {
+func (u *UserSystem) AddQqUser(info *qq.UserInfo) (appgo.Id, error) {
 	sex := appgo.SexDefault
 	if info.Sex == "男" {
 		sex = appgo.SexMale
@@ -211,7 +216,48 @@ func (u *UserSystem) AddQqUser(info *qq.UserInfo) (uid appgo.Id, err error) {
 	return u.saveUser(user)
 }
 
-func (u *UserSystem) GetMobileUser(mobile, password string) (uid appgo.Id, err error) {
+func (u *UserSystem) GetOAuthUser(index int, id string) (appgo.Id, error) {
+	if index < 0 || index > 1 {
+		return 0, errors.New("Invalid index")
+	}
+	if index == 0 {
+		return getUser(u.db, &UserModel{
+			OAuth0Id: database.SqlStr(id)})
+	} else {
+		return getUser(u.db, &UserModel{
+			OAuth1Id: database.SqlStr(id)})
+	}
+}
+
+func (u *UserSystem) AddOAuthUser(index int, id string, ui interface{}) (appgo.Id, error) {
+	if index < 0 || index > 1 {
+		return 0, errors.New("Invalid index")
+	}
+	userInfo, ok := ui.(*UserData)
+	if !ok {
+		return 0, errors.New("Invalid user data")
+	}
+	var user UserModel
+	if index == 0 {
+		user.OAuth0Id = database.SqlStr(id)
+	} else {
+		user.OAuth1Id = database.SqlStr(id)
+	}
+	user.Role = appgo.RoleAppUser
+	user.Nickname = database.SqlStr(*userInfo.Nickname)
+	user.Portrait = database.SqlStr(*userInfo.Portrait)
+	user.Sex = userInfo.Sex
+	return u.saveUser(&user)
+}
+
+func (u *UserSystem) GetOAuthUserInfo(index int, code string) (interface{}, string, error) {
+	if index < 0 || index > 1 || index >= len(u.OAuths) {
+		return nil, "", errors.New("Invalid index")
+	}
+	return u.OAuths[index](code)
+}
+
+func (u *UserSystem) GetMobileUser(mobile, password string) (appgo.Id, error) {
 	where := &UserModel{Mobile: database.SqlStr(mobile)}
 	var user UserModel
 	if db := u.db.Where(where).First(&user); db.Error != nil {

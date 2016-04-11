@@ -16,6 +16,8 @@ type UserModel struct {
 	WeiboId       sql.NullString `gorm:"size:63;unique_index"`
 	WeixinUnionId sql.NullString `gorm:"size:63;unique_index"`
 	QqOpenId      sql.NullString `gorm:"size:63;unique_index"`
+	OAuth0Id      sql.NullString `gorm:"size:63;unique_index"`
+	OAuth1Id      sql.NullString `gorm:"size:63;unique_index"`
 	// Only store appToken because webTokens are short lived
 	AppToken     sql.NullString `gorm:"size:127"`
 	Role         appgo.Role
