@@ -7,32 +7,34 @@ import (
 )
 
 var (
-	NotFoundErr           error
-	UnauthorizedErr       error
-	ForbiddenErr          error
-	InternalErr           error
-	InvalidUsernameErr    error
-	InvalidNicknameErr    error
-	InvalidPasswordErr    error
-	MobileUserNotFoundErr error
-	MobileUserBadCodeErr  error
-	MobileUserBadTokenErr error
+	NotFoundErr                error
+	UnauthorizedErr            error
+	ForbiddenErr               error
+	InternalErr                error
+	InvalidUsernameErr         error
+	InvalidNicknameErr         error
+	InvalidPasswordErr         error
+	MobileUserNotFoundErr      error
+	MobileUserBadCodeErr       error
+	MobileUserBadTokenErr      error
+	MobileUserAlreadyExistsErr error
 )
 
 const (
-	ECodeOK                 ErrCode = 20000
-	ECodeBadRequest                 = 40000
-	ECodeUnauthorized               = 40100
-	ECodeForbidden                  = 40300
-	ECodeNotFound                   = 40400
-	ECodeInternal                   = 50000
-	ECode3rdPartyAuthFailed         = 50300
-	ECodeInvalidUsername            = 60001
-	ECodeInvalidNickname            = 60002
-	ECodeInvalidPassword            = 60003
-	ECodeMobileUserNotFound         = 60101
-	ECodeMobileUserBadCode          = 60102
-	ECodeMobileUserBadToken         = 60103
+	ECodeOK                      ErrCode = 20000
+	ECodeBadRequest                      = 40000
+	ECodeUnauthorized                    = 40100
+	ECodeForbidden                       = 40300
+	ECodeNotFound                        = 40400
+	ECodeInternal                        = 50000
+	ECode3rdPartyAuthFailed              = 50300
+	ECodeInvalidUsername                 = 60001
+	ECodeInvalidNickname                 = 60002
+	ECodeInvalidPassword                 = 60003
+	ECodeMobileUserNotFound              = 60101
+	ECodeMobileUserBadCode               = 60102
+	ECodeMobileUserBadToken              = 60103
+	ECodeMobileUserAlreadyExists         = 60104
 )
 
 type ErrCode int
@@ -48,6 +50,7 @@ func init() {
 	MobileUserNotFoundErr = NewApiErr(ECodeMobileUserNotFound, "Mobile user not found")
 	MobileUserBadCodeErr = NewApiErr(ECodeMobileUserBadCode, "Mobile user bad code")
 	MobileUserBadTokenErr = NewApiErr(ECodeMobileUserBadToken, "Mobile user bad token")
+	MobileUserAlreadyExistsErr = NewApiErr(ECodeMobileUserAlreadyExists, "Mobile user already exists")
 }
 
 type ApiError struct {

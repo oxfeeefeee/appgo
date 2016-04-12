@@ -25,6 +25,7 @@ type MobileUserInfo struct {
 }
 
 type MobileSupport interface {
+	HasMobileUser(mobile string) (bool, error)
 	GetMobileUser(mobile, password string) (uid appgo.Id, err error)
 	AddMobileUser(info *MobileUserInfo) (uid appgo.Id, err error)
 	UpdatePwByMobile(mobile, password string) error
@@ -33,6 +34,11 @@ type MobileSupport interface {
 }
 
 func MobilePreRegister(mobile string) (string, error) {
+	if has, err := mobileSupport.HasMobileUser(mobile); err != nil {
+		return "", err
+	} else if has {
+		return "", appgo.MobileUserAlreadyExistsErr
+	}
 	return sendSmsCode(mobile, appgo.SmsTemplateRegister)
 }
 
@@ -64,6 +70,11 @@ func MobileRegisterUser(info *MobileUserInfo, role appgo.Role) (*LoginResult, er
 }
 
 func MobilePwReset(mobile string) (string, error) {
+	if has, err := mobileSupport.HasMobileUser(mobile); err != nil {
+		return "", err
+	} else if !has {
+		return "", appgo.MobileUserNotFoundErr
+	}
 	return sendSmsCode(mobile, appgo.SmsTemplatePwReset)
 }
 

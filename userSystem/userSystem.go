@@ -257,6 +257,18 @@ func (u *UserSystem) GetOAuthUserInfo(index int, code string) (interface{}, stri
 	return u.OAuths[index](code)
 }
 
+func (u *UserSystem) HasMobileUser(mobile string) (bool, error) {
+	where := &UserModel{Mobile: database.SqlStr(mobile)}
+	var user UserModel
+	if db := u.db.Where(where).First(&user); db.Error != nil {
+		if db.RecordNotFound() {
+			return false, nil
+		}
+		return false, db.Error
+	}
+	return true, nil
+}
+
 func (u *UserSystem) GetMobileUser(mobile, password string) (appgo.Id, error) {
 	where := &UserModel{Mobile: database.SqlStr(mobile)}
 	var user UserModel
