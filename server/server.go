@@ -41,9 +41,10 @@ func (s *Server) AddRest(path string, rests []interface{}) {
 	}
 }
 
-func (s *Server) AddHtml(path string, htmls []interface{}, funcs template.FuncMap) {
+func (s *Server) AddHtml(path, layout string, htmls []interface{}, funcs template.FuncMap) {
 	renderer := render.New(render.Options{
 		Directory:     appgo.Conf.TemplatePath,
+		Layout:        layout,
 		Funcs:         []template.FuncMap{funcs},
 		IsDevelopment: appgo.Conf.DevMode,
 	})
