@@ -64,7 +64,7 @@ func (s *Server) AddStatic(path, fileDir string) {
 
 func (s *Server) AddAppleAppSiteAsso(content []byte) {
 	f := func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", "application/json")
 		w.Write(content)
 	}
 	s.HandleFunc("/apple-app-site-association", f)
