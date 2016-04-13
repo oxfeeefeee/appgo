@@ -62,6 +62,10 @@ func (e *ApiError) Error() string {
 	return e.Msg
 }
 
+func (e *ApiError) HttpCode() int {
+	return int(e.Code) / 100
+}
+
 func (e *ApiError) HttpError(w http.ResponseWriter) {
 	code := 200 //int(e.Code) / 100
 	http.Error(w, "", code)

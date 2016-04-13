@@ -20,7 +20,10 @@ func (h *handler) renderError(w http.ResponseWriter, err *appgo.ApiError) {
 	if h.htype == HandlerTypeJson {
 		h.renderJSON(w, err)
 	} else if h.htype == HandlerTypeHtml {
-		h.renderHtml(w, "content", err)
+		err := h.renderer.Text(w, err.HttpCode(), err.Error())
+		if err != nil {
+			log.WithField("error", err).Error("Error rendering html error")
+		}
 	} else {
 		panic("Bad handler type")
 	}

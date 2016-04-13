@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"errors"
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
 	"github.com/oxfeeefeee/appgo"
@@ -13,7 +12,7 @@ var (
 )
 
 var (
-	ErrNotFound = errors.New("value not found")
+	ErrNotFound = appgo.NewApiErr(appgo.ECodeNotFound, "redis: value not found")
 )
 
 func init() {

@@ -140,7 +140,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		retErr = returns[1]
 	}
-	// First check is err is nil
+	// First check if err is nil
 	if retErr.IsNil() {
 		if len(returns) == 2 {
 			h.renderData(w, returns[0].Interface())
