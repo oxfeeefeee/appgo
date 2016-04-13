@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	pushBatchSize = 3
+	pushBatchSize = 450
 )
 
 func (u *UserSystem) PushTo(users []appgo.Id, content *appgo.PushData) {
