@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"syscall"
 )
 
 var once sync.Once
@@ -29,11 +30,13 @@ func InitLogHooks(skip int) {
 	})
 }
 
-func InitLogOutput(w io.Writer, withstd bool) {
+func SetLogFile(f *os.File, withstd bool) {
+	syscall.Dup2(int(f.Fd()), 2)
 	if withstd {
-		w = io.MultiWriter(w, os.Stdout)
+		logrus.SetOutput(io.MultiWriter(f, os.Stdout))
+	} else {
+		logrus.SetOutput(f)
 	}
-	logrus.SetOutput(w)
 }
 
 type FileInfoHook struct {
