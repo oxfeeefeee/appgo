@@ -76,6 +76,11 @@ var Conf struct {
 			AppMasterSecret string
 		}
 	}
+	Graylog struct {
+		Ip       string
+		Port     string
+		Facility string
+	}
 }
 
 func initConfig() {
