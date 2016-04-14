@@ -7,6 +7,7 @@ import (
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
+	"github.com/phyber/negroni-gzip/gzip"
 	"github.com/rs/cors"
 	"github.com/unrolled/render"
 	"html/template"
@@ -76,6 +77,9 @@ func (s *Server) Serve() {
 	n.Use(negronilogrus.NewCustomMiddleware(
 		appgo.Conf.LogLevel, &log.TextFormatter{}, "appgo"))
 	n.Use(cors.New(corsOptions()))
+	if appgo.Conf.Negroni.GZip {
+		n.Use(gzip.Gzip(gzip.DefaultCompression))
+	}
 	n.UseHandler(s)
 	n.Run(appgo.Conf.Negroni.Port)
 }

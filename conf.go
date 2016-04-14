@@ -29,6 +29,7 @@ var Conf struct {
 	}
 	Negroni struct {
 		Port string
+		GZip bool
 	}
 	Cors struct {
 		AllowedOrigins     string
