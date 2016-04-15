@@ -16,16 +16,18 @@ import (
 )
 
 type Server struct {
-	ts TokenStore
+	ts          TokenStore
+	middlewares []negroni.HandlerFunc
 	*mux.Router
 }
 type TokenStore interface {
 	Validate(token auth.Token) bool
 }
 
-func NewServer(ts TokenStore) *Server {
+func NewServer(ts TokenStore, middlewares []negroni.HandlerFunc) *Server {
 	return &Server{
 		ts,
+		middlewares,
 		mux.NewRouter(),
 	}
 }
@@ -79,6 +81,9 @@ func (s *Server) Serve() {
 	n.Use(cors.New(corsOptions()))
 	if appgo.Conf.Negroni.GZip {
 		n.Use(gzip.Gzip(gzip.DefaultCompression))
+	}
+	for _, mw := range s.middlewares {
+		n.Use(negroni.HandlerFunc(mw))
 	}
 	n.UseHandler(s)
 	n.Run(appgo.Conf.Negroni.Port)
