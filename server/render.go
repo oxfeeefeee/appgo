@@ -2,6 +2,7 @@ package server
 
 import (
 	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/feeds"
 	"github.com/oxfeeefeee/appgo"
 	"net/http"
 )
@@ -11,6 +12,8 @@ func (h *handler) renderData(w http.ResponseWriter, v interface{}) {
 		h.renderJSON(w, v)
 	} else if h.htype == HandlerTypeHtml {
 		h.renderHtml(w, h.template, v)
+	} else if h.htype == HandlerTypeFeed {
+		h.renderFeed(w, v)
 	} else {
 		panic("Bad handler type")
 	}
@@ -23,6 +26,11 @@ func (h *handler) renderError(w http.ResponseWriter, err *appgo.ApiError) {
 		err := h.renderer.Text(w, err.HttpCode(), err.Error())
 		if err != nil {
 			log.WithField("error", err).Error("Error rendering html error")
+		}
+	} else if h.htype == HandlerTypeFeed {
+		err := h.renderer.XML(w, err.HttpCode(), err.Error())
+		if err != nil {
+			log.WithField("error", err).Error("Error rendering feed error")
 		}
 	} else {
 		panic("Bad handler type")
@@ -46,5 +54,24 @@ func (h *handler) renderHtml(w http.ResponseWriter, template string, data interf
 			"error": err,
 			"data":  data,
 		}).Error("Error rendering html")
+	}
+}
+
+func (h *handler) renderFeed(w http.ResponseWriter, v interface{}) {
+	feed, ok := v.(feeds.XmlFeed)
+	if !ok {
+		h.renderError(w, appgo.InternalErr)
+		log.WithFields(log.Fields{
+			"data": v,
+		}).Error("Bad return value for feed")
+		return
+	}
+	if err := feeds.WriteXML(feed, w); err != nil {
+		h.renderError(w, appgo.ApiErrFromGoErr(err))
+		log.WithFields(log.Fields{
+			"err":  err,
+			"feed": feed,
+		}).Error("feed.ToRss error")
+		return
 	}
 }

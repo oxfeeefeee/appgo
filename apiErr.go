@@ -7,17 +7,17 @@ import (
 )
 
 var (
-	NotFoundErr                error
-	UnauthorizedErr            error
-	ForbiddenErr               error
-	InternalErr                error
-	InvalidUsernameErr         error
-	InvalidNicknameErr         error
-	InvalidPasswordErr         error
-	MobileUserNotFoundErr      error
-	MobileUserBadCodeErr       error
-	MobileUserBadTokenErr      error
-	MobileUserAlreadyExistsErr error
+	NotFoundErr                *ApiError
+	UnauthorizedErr            *ApiError
+	ForbiddenErr               *ApiError
+	InternalErr                *ApiError
+	InvalidUsernameErr         *ApiError
+	InvalidNicknameErr         *ApiError
+	InvalidPasswordErr         *ApiError
+	MobileUserNotFoundErr      *ApiError
+	MobileUserBadCodeErr       *ApiError
+	MobileUserBadTokenErr      *ApiError
+	MobileUserAlreadyExistsErr *ApiError
 )
 
 const (
