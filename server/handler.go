@@ -130,20 +130,19 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	argsIn := []reflect.Value{input}
 	returns := f.funcValue.Call(argsIn)
-	if len(returns) == 0 || len(returns) > 2 {
+	rl := len(returns)
+	if !(rl == 1 || rl == 2 || (rl == 3 && h.htype == HandlerTypeHtml)) {
 		h.renderError(w, appgo.NewApiErr(appgo.ECodeInternal, "Bad api-func format"))
 		return
 	}
-	// Either returns (reply, error) or returns (error)
-	var retErr reflect.Value
-	if len(returns) == 1 {
-		retErr = returns[0]
-	} else {
-		retErr = returns[1]
-	}
+	// returns (reply, template-name, error) or (reply, error) or returns (error)
+	retErr := returns[rl-1]
 	// First check if err is nil
 	if retErr.IsNil() {
-		if len(returns) == 2 {
+		if rl == 3 {
+			template := returns[1].Interface().(string)
+			h.renderHtml(w, template, returns[0].Interface())
+		} else if rl == 2 {
 			h.renderData(w, returns[0].Interface())
 		} else { // Empty return
 			h.renderData(w, map[string]string{})
@@ -185,11 +184,8 @@ func newHandler(funcSet interface{}, htype HandlerType,
 			path = p
 		}
 		if htype == HandlerTypeHtml {
-			if t := field.Tag.Get("template"); t == "" {
-				log.Panicln("Empty HTML template")
-			} else {
-				template = t
-			}
+			t := field.Tag.Get("template")
+			template = t
 		}
 	}
 	structVal := reflect.Indirect(reflect.ValueOf(funcSet))
