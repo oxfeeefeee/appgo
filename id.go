@@ -41,12 +41,6 @@ func (id *Id) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// for github.com/gorilla/schema
-func (id *Id) UnmarshalText(text []byte) (err error) {
-	*id = IdFromStr(string(text))
-	return nil
-}
-
 func IdFromStr(str string) Id {
 	i, _ := strconv.ParseInt(str, 10, 64)
 	return Id(i)
