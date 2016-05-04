@@ -12,6 +12,11 @@ const (
 )
 
 func (u *UserSystem) PushTo(users []appgo.Id, content *appgo.PushData) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("Push notification paniced: ", r)
+		}
+	}()
 	doPush := func(ids []appgo.Id) {
 		if tokens, err := u.GetPushTokens(ids); err != nil {
 			log.WithFields(log.Fields{
