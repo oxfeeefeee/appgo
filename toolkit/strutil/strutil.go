@@ -88,6 +88,10 @@ func ToStrList(str string) []string {
 	return v
 }
 
+func ToObject(obj interface{}, str string) {
+	json.Unmarshal([]byte(str), obj)
+}
+
 func FromIdList(ids []appgo.Id) string {
 	if ids == nil {
 		return "[]"
@@ -101,5 +105,10 @@ func FromStrList(strs []string) string {
 		return "[]"
 	}
 	data, _ := json.Marshal(&strs)
+	return string(data)
+}
+
+func FromObject(obj interface{}) string {
+	data, _ := json.Marshal(obj)
 	return string(data)
 }
