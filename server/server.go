@@ -18,6 +18,7 @@ import (
 type Server struct {
 	ts          TokenStore
 	middlewares []negroni.HandlerFunc
+	ver         *versioning
 	*mux.Router
 }
 type TokenStore interface {
@@ -28,6 +29,7 @@ func NewServer(ts TokenStore, middlewares []negroni.HandlerFunc) *Server {
 	return &Server{
 		ts,
 		middlewares,
+		newVersioning(),
 		mux.NewRouter(),
 	}
 }
@@ -45,6 +47,15 @@ func (s *Server) AddRest(path string, rests []interface{}) {
 }
 
 func (s *Server) AddHtml(path, layout string, htmls []interface{}, funcs template.FuncMap) {
+	// add "static" template function
+	static := func(path string) string {
+		return s.ver.getStatic(path)
+	}
+	if funcs == nil {
+		funcs = template.FuncMap{}
+	}
+	funcs["static"] = static
+
 	renderer := render.New(render.Options{
 		Directory:     appgo.Conf.TemplatePath,
 		Layout:        layout,
@@ -74,6 +85,7 @@ func (s *Server) AddProxy(path string, handler http.Handler) {
 }
 
 func (s *Server) AddStatic(path, fileDir string) {
+	s.ver.addMap(path, fileDir)
 	s.AddProxy(path, http.FileServer(http.Dir(fileDir)))
 }
 
