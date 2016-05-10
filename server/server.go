@@ -111,7 +111,7 @@ func (s *Server) Serve() {
 		appgo.Conf.LogLevel, &log.TextFormatter{}, "appgo"))
 	n.Use(cors.New(corsOptions()))
 	if appgo.Conf.Negroni.GZip {
-		n.Use(gzip.Gzip(gzip.DefaultCompression))
+		n.Use(gzip.Gzip(gzip.BestSpeed))
 	}
 	for _, mw := range s.middlewares {
 		n.Use(negroni.HandlerFunc(mw))
