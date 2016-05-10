@@ -12,6 +12,7 @@ import (
 	"github.com/unrolled/render"
 	"html/template"
 	"net/http"
+	_ "net/http/pprof"
 	"strings"
 )
 
@@ -98,6 +99,12 @@ func (s *Server) AddAppleAppSiteAsso(content []byte) {
 }
 
 func (s *Server) Serve() {
+	if appgo.Conf.Pprof.Enable {
+		go func() {
+			log.Infoln(http.ListenAndServe(":"+appgo.Conf.Pprof.Port, nil))
+		}()
+	}
+
 	n := negroni.New()
 	n.Use(negroni.NewRecovery())
 	n.Use(negronilogrus.NewCustomMiddleware(

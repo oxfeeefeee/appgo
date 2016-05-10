@@ -12,7 +12,11 @@ var Conf struct {
 	LogLevel     log.Level
 	RootKey      string
 	TemplatePath string
-	Mysql        struct {
+	Pprof        struct {
+		Enable bool
+		Port   string
+	}
+	Mysql struct {
 		Host     string
 		Port     string
 		User     string
