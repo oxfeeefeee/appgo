@@ -106,15 +106,19 @@ func (s *Server) Serve() {
 	}
 
 	n := negroni.New()
-	n.Use(negroni.NewRecovery())
-	n.Use(negronilogrus.NewCustomMiddleware(
-		appgo.Conf.LogLevel, &log.TextFormatter{}, "appgo"))
+	rec := negroni.NewRecovery()
+	rec.StackAll = true
+	n.Use(rec)
+	llog := negronilogrus.NewCustomMiddleware(
+		appgo.Conf.LogLevel, &log.TextFormatter{}, "appgo")
+	llog.Logger = log.StandardLogger()
+	n.Use(llog)
 	n.Use(cors.New(corsOptions()))
-	if appgo.Conf.Negroni.GZip {
-		n.Use(gzip.Gzip(gzip.BestSpeed))
-	}
 	for _, mw := range s.middlewares {
 		n.Use(negroni.HandlerFunc(mw))
+	}
+	if appgo.Conf.Negroni.GZip {
+		n.Use(gzip.Gzip(gzip.BestSpeed))
 	}
 	n.UseHandler(s)
 	n.Run(appgo.Conf.Negroni.Port)
