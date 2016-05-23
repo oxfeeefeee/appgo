@@ -28,6 +28,13 @@ func (z *Zsets) Rem(key, item interface{}) error {
 	return nil
 }
 
+func (z *Zsets) Incrby(key interface{}, score float64, item interface{}) error {
+	if _, err := Do("ZINCRBY", z.keystr(key), score, item); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (z *Zsets) Min(key interface{}) (interface{}, error) {
 	return oneFromSlice(z.Range(key, 0, 0))
 }

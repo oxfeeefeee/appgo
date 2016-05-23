@@ -18,15 +18,25 @@ import (
 
 type Server struct {
 	ts          TokenStore
-	middlewares []negroni.HandlerFunc
+	middlewares []negroni.Handler
 	ver         *versioning
 	*mux.Router
 }
+
 type TokenStore interface {
 	Validate(token auth.Token) bool
 }
 
-func NewServer(ts TokenStore, middlewares []negroni.HandlerFunc) *Server {
+type MetricsSchema interface {
+	KeysGen(r *http.Request) (keys []string)
+}
+
+func NewServer(ts TokenStore, middlewares []negroni.Handler,
+	mschema []MetricsSchema) *Server {
+	for _, s := range mschema {
+		m := newMetrics(s)
+		middlewares = append(middlewares, m)
+	}
 	return &Server{
 		ts,
 		middlewares,
@@ -115,7 +125,7 @@ func (s *Server) Serve() {
 	n.Use(llog)
 	n.Use(cors.New(corsOptions()))
 	for _, mw := range s.middlewares {
-		n.Use(negroni.HandlerFunc(mw))
+		n.Use(mw)
 	}
 	if appgo.Conf.Negroni.GZip {
 		n.Use(gzip.Gzip(gzip.BestSpeed))
