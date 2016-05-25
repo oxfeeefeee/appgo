@@ -1,15 +1,13 @@
 package server
 
 import (
-	//log "github.com/Sirupsen/logrus"
-	"github.com/oxfeeefeee/appgo"
-	"github.com/oxfeeefeee/appgo/auth"
+	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo/redis"
 	"net/http"
 )
 
 const (
-	zsetNamespace = "metrics:access"
+	zsetNamespace = "metrics"
 	totalKey      = "total"
 
 	contextKeyUser = "user"
@@ -30,11 +28,14 @@ func newMetrics(schema MetricsSchema) *Metrics {
 func (m *Metrics) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	next(rw, r)
 
+	var params []redis.ZsetIncrbyParams
 	keys := m.schema.KeysGen(r)
-	id := getUserFromToken(r)
-	for _, key := range keys {
-		m.zsets.Incrby(id.String(), 1, key)
-		m.zsets.Incrby(totalKey, 1, key)
+	for k, v := range keys {
+		params = append(params, redis.ZsetIncrbyParams{k, v, 1})
+	}
+	err := m.zsets.BatchIncrby(params)
+	if err != nil {
+		log.WithField("params", params).Errorln("BatchIncrby error")
 	}
 }
 
@@ -45,12 +46,12 @@ func NewDefaultSchema() *DefaultSchema {
 	return &DefaultSchema{}
 }
 
-func (s *DefaultSchema) KeysGen(r *http.Request) (keys []string) {
-	return []string{r.Method + r.URL.Path}
-}
-
-func getUserFromToken(r *http.Request) appgo.Id {
-	token := auth.Token(r.Header.Get(appgo.CustomTokenHeaderName))
-	user, _ := token.Validate()
-	return user
+func (s *DefaultSchema) KeysGen(r *http.Request) map[string]string {
+	id := GetUserFromToken(r)
+	item := r.Method + r.URL.Path
+	return map[string]string{
+		"raw": item,
+		"raw:u" + id.String(): item,
+		"raw:users":           id.String(),
+	}
 }

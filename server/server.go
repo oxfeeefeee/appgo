@@ -28,7 +28,7 @@ type TokenStore interface {
 }
 
 type MetricsSchema interface {
-	KeysGen(r *http.Request) (keys []string)
+	KeysGen(r *http.Request) map[string]string
 }
 
 func NewServer(ts TokenStore, middlewares []negroni.Handler,
@@ -132,6 +132,12 @@ func (s *Server) Serve() {
 	}
 	n.UseHandler(s)
 	n.Run(appgo.Conf.Negroni.Port)
+}
+
+func GetUserFromToken(r *http.Request) appgo.Id {
+	token := auth.Token(r.Header.Get(appgo.CustomTokenHeaderName))
+	user, _ := token.Validate()
+	return user
 }
 
 func corsOptions() cors.Options {
