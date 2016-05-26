@@ -22,6 +22,7 @@ var (
 
 const (
 	ECodeOK                      ErrCode = 20000
+	ECodeRedirect                        = 30200
 	ECodeBadRequest                      = 40000
 	ECodeUnauthorized                    = 40100
 	ECodeForbidden                       = 40300

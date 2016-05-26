@@ -151,6 +151,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if aerr, ok := retErr.Interface().(*appgo.ApiError); !ok {
 			aerr = appgo.NewApiErr(appgo.ECodeInternal, "Bad api-func format")
 		} else {
+			if h.htype == HandlerTypeHtml && aerr.Code == appgo.ECodeRedirect {
+				http.Redirect(w, r, aerr.Msg, http.StatusFound)
+				return
+			}
 			h.renderError(w, aerr)
 		}
 	}
