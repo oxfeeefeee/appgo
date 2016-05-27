@@ -7,6 +7,10 @@ import (
 	"path/filepath"
 )
 
+var (
+	RootDir string
+)
+
 var Conf struct {
 	DevMode      bool
 	LogLevel     log.Level
@@ -88,7 +92,8 @@ var Conf struct {
 }
 
 func initConfig() {
-	filePath := searchConfigFile()
+	filePath, rd := searchConfigFile()
+	RootDir = rd
 	err := configor.Load(&Conf, filePath)
 	if err != nil {
 		log.WithField("error", err).Panicln("Failed to load config file")
@@ -98,16 +103,18 @@ func initConfig() {
 	}
 }
 
-func searchConfigFile() string {
+func searchConfigFile() (fullPath string, rootDir string) {
+	rootDir = "./"
 	// Search up for config file
-	left, upALevel, right, result := "./", "../", "conf/appgo.yml", ""
+	left, upALevel, right := "./", "../", "conf/appgo.yml"
 	for i := 0; i < 5; i++ {
 		p := filepath.Join(left, right)
 		if _, err := os.Stat(p); err == nil {
-			result = p
+			fullPath = p
+			rootDir = left
 			break
 		}
 		left = filepath.Join(left, upALevel)
 	}
-	return result
+	return
 }
