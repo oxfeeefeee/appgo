@@ -34,6 +34,14 @@ func (z *Zsets) Rem(key, item interface{}) error {
 	return nil
 }
 
+func (z *Zsets) Card(key interface{}) (int, error) {
+	return redigo.Int(Do("ZCARD", z.keystr(key)))
+}
+
+func (z *Zsets) Count(key, min, max interface{}) (int, error) {
+	return redigo.Int(Do("ZCOUNT", z.keystr(key), min, max))
+}
+
 func (z *Zsets) Incrby(key interface{}, score float64, item interface{}) error {
 	if _, err := Do("ZINCRBY", z.keystr(key), score, item); err != nil {
 		return err
@@ -51,15 +59,24 @@ func (z *Zsets) BatchIncrby(params []ZsetIncrbyParams) error {
 }
 
 func (z *Zsets) Min(key interface{}) (interface{}, error) {
-	return oneFromSlice(z.Range(key, 0, 0))
+	return oneFromSlice(z.Range(key, 0, 0, false, false))
 }
 
 func (z *Zsets) Max(key interface{}) (interface{}, error) {
-	return oneFromSlice(z.Range(key, -1, -1))
+	return oneFromSlice(z.Range(key, -1, -1, false, false))
 }
 
-func (z *Zsets) Range(key interface{}, b, e int) ([]interface{}, error) {
-	return redigo.Values(Do("ZRANGE", z.keystr(key), b, e))
+func (z *Zsets) Range(key interface{}, b, e int, rev, withscores bool) ([]interface{}, error) {
+	cmd := "ZRANGE"
+	if rev {
+		cmd = "ZREVRANGE"
+	}
+	if withscores {
+		return redigo.Values(Do(cmd, z.keystr(key), b, e, "WITHSCORES"))
+	} else {
+		return redigo.Values(Do(cmd, z.keystr(key), b, e))
+	}
+
 }
 
 func (z *Zsets) MinStr(key interface{}) (string, error) {
@@ -70,8 +87,8 @@ func (z *Zsets) MaxStr(key interface{}) (string, error) {
 	return redigo.String(z.Max(key))
 }
 
-func (z *Zsets) RangeStr(key interface{}, b, e int) ([]string, error) {
-	return redigo.Strings(z.Range(key, b, e))
+func (z *Zsets) RangeStr(key interface{}, b, e int, rev, withscores bool) ([]string, error) {
+	return redigo.Strings(z.Range(key, b, e, rev, withscores))
 }
 
 func (z *Zsets) keystr(k interface{}) string {

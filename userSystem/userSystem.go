@@ -97,15 +97,23 @@ func (u *UserSystem) Validate(token auth.Token) bool {
 	return true //todo
 }
 
-func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
-	newToken auth.Token) (banned bool, extraInfo interface{}, err error) {
+func (u *UserSystem) GetUserModel(id appgo.Id) (*UserModel, error) {
 	user := &UserModel{Id: id}
 	if err := u.db.First(user).Error; err != nil {
 		log.WithFields(log.Fields{
 			"id":        id,
 			"gormError": err,
 		}).Infoln("failed to find user")
-		return false, nil, appgo.NotFoundErr
+		return nil, appgo.NotFoundErr
+	}
+	return user, nil
+}
+
+func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
+	newToken auth.Token) (banned bool, extraInfo interface{}, err error) {
+	user, err := u.GetUserModel(id)
+	if err != nil {
+		return false, nil, err
 	}
 	if role > user.Role {
 		return false, nil, appgo.ForbiddenErr
