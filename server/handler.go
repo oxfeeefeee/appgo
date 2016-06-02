@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/schema"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
+	"github.com/oxfeeefeee/appgo/toolkit/strutil"
 	"github.com/unrolled/render"
 	"net/http"
 	"reflect"
@@ -19,6 +20,8 @@ const (
 	ResIdFieldName       = "ResourceId__"
 	ContentFieldName     = "Content__"
 	RequestFieldName     = "Request__"
+
+	maxVersion = 99
 )
 
 const (
@@ -60,7 +63,18 @@ func init() {
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f := h.funcs[r.Method]
+	method := r.Method
+	ver := apiVersionFromHeader(r)
+	if ver > 1 && ver <= maxVersion {
+		method += strutil.FromInt(ver)
+	}
+	f, ok := h.funcs[method]
+	if !ok {
+		h.renderError(w, appgo.NewApiErr(
+			appgo.ECodeNotFound,
+			"Bad API version"))
+		return
+	}
 	var input reflect.Value
 	if f.dummyInput {
 		input = reflect.ValueOf((*appgo.DummyInput)(nil))
@@ -172,6 +186,11 @@ func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
 	return user, role
 }
 
+func apiVersionFromHeader(r *http.Request) int {
+	v := r.Header.Get(appgo.CustomVersionHeaderName)
+	return strutil.ToInt(v)
+}
+
 func newHandler(funcSet interface{}, htype HandlerType,
 	ts TokenStore, renderer *render.Render) *handler {
 	funcs := make(map[string]*httpFunc)
@@ -197,11 +216,16 @@ func newHandler(funcSet interface{}, htype HandlerType,
 	if htype == HandlerTypeJson {
 		methods := []string{"GET", "POST", "PUT", "DELETE"}
 		for _, m := range methods {
-			if fun, err := newHttpFunc(structVal, m); err != nil {
-				log.Panicln(err)
-			} else if fun != nil {
-				funcs[m] = fun
-				supports = append(supports, m)
+			for i := 1; i <= maxVersion; i++ { //versions
+				if i > 1 {
+					m += strutil.FromInt(i)
+				}
+				if fun, err := newHttpFunc(structVal, m); err != nil {
+					log.Panicln(err)
+				} else if fun != nil {
+					funcs[m] = fun
+					supports = append(supports, m)
+				}
 			}
 		}
 		if len(supports) == 0 {

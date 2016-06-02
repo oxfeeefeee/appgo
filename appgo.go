@@ -12,6 +12,8 @@ const InternalTestToken = "sjadfjlksadfjkljfwoeifshgsdhgsldfjf"
 
 const CustomTokenHeaderName = "X-Appgo-Token"
 
+const CustomVersionHeaderName = "X-Appgo-Api-Version"
+
 const (
 	RoleAppUser  Role = 100
 	RoleWebUser       = 101
