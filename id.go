@@ -33,6 +33,10 @@ func (id *Id) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
+	if s == "" {
+		*id = 0
+		return nil
+	}
 	if val, err := strconv.ParseInt(s, 10, 64); err != nil {
 		return err
 	} else {
