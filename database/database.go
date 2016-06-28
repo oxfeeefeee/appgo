@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/oxfeeefeee/appgo"
+	"time"
 )
 
 func MysqlConnStr() string {
@@ -14,9 +15,16 @@ func MysqlConnStr() string {
 }
 
 func Open(driver string) (*gorm.DB, error) {
+	c := &appgo.Conf.Mysql
 	switch driver {
 	case "mysql":
-		return gorm.Open(driver, MysqlConnStr())
+		gormdb, err := gorm.Open(driver, MysqlConnStr())
+		if err != nil {
+			return nil, err
+		}
+		gormdb.DB().SetConnMaxLifetime(time.Second * time.Duration(c.MaxLifetime))
+		gormdb.DB().SetMaxOpenConns(c.MaxConn)
+		return gormdb, nil
 	default:
 		return nil, fmt.Errorf("database: unknown driver %q", driver)
 	}

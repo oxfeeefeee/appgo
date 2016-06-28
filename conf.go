@@ -21,12 +21,14 @@ var Conf struct {
 		Port   string
 	}
 	Mysql struct {
-		Host     string
-		Port     string
-		User     string
-		Password string
-		DbName   string
-		Charset  string
+		Host        string
+		Port        string
+		User        string
+		Password    string
+		DbName      string
+		Charset     string
+		MaxConn     int
+		MaxLifetime int
 	}
 	Redis struct {
 		Host        string
