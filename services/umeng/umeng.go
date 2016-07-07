@@ -30,9 +30,9 @@ type AndroidBody struct {
 	Title       string      `json:"title,omitempty"`
 	Text        string      `json:"text,omitempty"`
 	Sound       string      `json:"sound,omitempty"`
-	PlayVibrate bool        `json:"play_vibrate,omitempty"`
-	PlayLights  bool        `json:"play_lights,omitempty"`
-	PlaySound   bool        `json:"play_sound,omitempty"`
+	PlayVibrate string      `json:"play_vibrate,omitempty"`
+	PlayLights  string      `json:"play_lights,omitempty"`
+	PlaySound   string      `json:"play_sound,omitempty"`
 	AfterOpen   string      `json:"after_open,omitempty"`
 	Url         string      `json:"url,omitempty"`
 	Activity    string      `json:"activity,omitempty"`
@@ -132,14 +132,20 @@ func buildIosPayload(content *appgo.PushData) interface{} {
 func buildAndroidPayload(content *appgo.PushData) interface{} {
 	ret := make(map[string]interface{})
 	ret["display_type"] = "notification"
+	ps := "false"
+	if len(content.Sound) > 0 {
+		ps = "true"
+	}
 	ret["body"] = &AndroidBody{
-		Ticker:    content.Message,
-		Title:     content.Title,
-		Text:      content.Message,
-		Sound:     content.Sound,
-		PlaySound: len(content.Sound) > 0,
-		AfterOpen: "go_custom",
-		Custom:    content.Custom,
+		Ticker:      content.Message,
+		Title:       content.Title,
+		Text:        content.Message,
+		Sound:       content.Sound,
+		PlayVibrate: "false",
+		PlayLights:  "false",
+		PlaySound:   ps,
+		AfterOpen:   "go_custom",
+		Custom:      content.Custom,
 	}
 	return ret
 }
