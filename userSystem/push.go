@@ -30,7 +30,17 @@ func (u *UserSystem) PushTo(users []appgo.Id, content *appgo.PushData) {
 					pusher = p
 				}
 				for plat, tokens := range data {
+					log.WithFields(log.Fields{
+						"platform": plat,
+						"tokens":   tokens,
+						"content":  content,
+					}).Infoln("begin push")
 					pusher.PushNotif(plat, tokens, content)
+					log.WithFields(log.Fields{
+						"platform": plat,
+						"tokens":   tokens,
+						"content":  content,
+					}).Infoln("end push")
 				}
 			}
 		}
