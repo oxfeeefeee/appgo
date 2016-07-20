@@ -28,7 +28,6 @@ const (
 	_ HandlerType = iota
 	HandlerTypeJson
 	HandlerTypeHtml
-	HandlerTypeFeed
 )
 
 var decoder = schema.NewDecoder()
@@ -236,14 +235,6 @@ func newHandler(funcSet interface{}, htype HandlerType,
 			log.Panicln(err)
 		} else if fun == nil {
 			log.Panicln("No HTML function for html")
-		} else {
-			funcs["GET"] = fun
-		}
-	} else if htype == HandlerTypeFeed {
-		if fun, err := newHttpFunc(structVal, "FEED"); err != nil {
-			log.Panicln(err)
-		} else if fun == nil {
-			log.Panicln("No FEED function for feed")
 		} else {
 			funcs["GET"] = fun
 		}

@@ -79,18 +79,6 @@ func (s *Server) AddHtml(path, layout string, htmls []interface{}, funcs templat
 	}
 }
 
-func (s *Server) AddFeed(path string, feeds []interface{}) {
-	// renderer is only for rendering error
-	renderer := render.New(render.Options{
-		Directory:     "N/A",
-		IsDevelopment: appgo.Conf.DevMode,
-	})
-	for _, api := range feeds {
-		h := newHandler(api, HandlerTypeFeed, s.ts, renderer)
-		s.Handle(path+h.path, h).Methods("GET")
-	}
-}
-
 func (s *Server) AddProxy(path string, handler http.Handler) {
 	s.PathPrefix(path).Handler(http.StripPrefix(path, handler))
 }
