@@ -86,6 +86,10 @@ var Conf struct {
 			AppMasterSecret string
 		}
 	}
+	Leancloud struct {
+		AppId  string
+		AppKey string
+	}
 	Graylog struct {
 		Ip       string
 		Port     string

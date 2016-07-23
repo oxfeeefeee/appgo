@@ -34,6 +34,13 @@ func (z *Zsets) Rem(key, item interface{}) error {
 	return nil
 }
 
+func (z *Zsets) RemByScore(key interface{}, min, max float64) error {
+	if _, err := Do("ZREMRANGEBYSCORE", z.keystr(key), min, max); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (z *Zsets) Card(key interface{}) (int, error) {
 	return redigo.Int(Do("ZCARD", z.keystr(key)))
 }
@@ -76,7 +83,19 @@ func (z *Zsets) Range(key interface{}, b, e int, rev, withscores bool) ([]interf
 	} else {
 		return redigo.Values(Do(cmd, z.keystr(key), b, e))
 	}
+}
 
+func (z *Zsets) RangeByScore(
+	key interface{}, max, min float64, offset, limit int, rev, withscores bool) ([]interface{}, error) {
+	cmd := "ZRANGEBYSCORE"
+	if rev {
+		cmd = "ZREVRANGEBYSCORE"
+	}
+	if withscores {
+		return redigo.Values(Do(cmd, z.keystr(key), max, min, "WITHSCORES", "LIMIT", offset, limit))
+	} else {
+		return redigo.Values(Do(cmd, z.keystr(key), max, min, "LIMIT", offset, limit))
+	}
 }
 
 func (z *Zsets) MinStr(key interface{}) (string, error) {
@@ -89,6 +108,11 @@ func (z *Zsets) MaxStr(key interface{}) (string, error) {
 
 func (z *Zsets) RangeStr(key interface{}, b, e int, rev, withscores bool) ([]string, error) {
 	return redigo.Strings(z.Range(key, b, e, rev, withscores))
+}
+
+func (z *Zsets) RangeByScoreStr(
+	key interface{}, max, min float64, offset, limit int, rev, withscores bool) ([]string, error) {
+	return redigo.Strings(z.RangeByScore(key, max, min, offset, limit, rev, withscores))
 }
 
 func (z *Zsets) keystr(k interface{}) string {
