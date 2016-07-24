@@ -34,6 +34,13 @@ func (z *Zsets) Rem(key, item interface{}) error {
 	return nil
 }
 
+func (z *Zsets) Clear(key interface{}) error {
+	if _, err := Do("DEL", z.keystr(key)); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (z *Zsets) RemByScore(key interface{}, min, max float64) error {
 	if _, err := Do("ZREMRANGEBYSCORE", z.keystr(key), min, max); err != nil {
 		return err
