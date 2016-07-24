@@ -4,6 +4,7 @@ import (
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
 	"github.com/oxfeeefeee/appgo"
+	"strconv"
 )
 
 type Zsets struct {
@@ -93,15 +94,24 @@ func (z *Zsets) Range(key interface{}, b, e int, rev, withscores bool) ([]interf
 }
 
 func (z *Zsets) RangeByScore(
-	key interface{}, max, min float64, offset, limit int, rev, withscores bool) ([]interface{}, error) {
+	key interface{}, max float64, maxInclusive bool, min float64, minInclusive bool,
+	offset, limit int, rev, withscores bool) ([]interface{}, error) {
 	cmd := "ZRANGEBYSCORE"
 	if rev {
 		cmd = "ZREVRANGEBYSCORE"
 	}
+	maxstr := strconv.FormatFloat(max, 'f', -1, 64)
+	if !maxInclusive {
+		maxstr = "(" + maxstr
+	}
+	minstr := strconv.FormatFloat(min, 'f', -1, 64)
+	if !minInclusive {
+		minstr = "(" + minstr
+	}
 	if withscores {
-		return redigo.Values(Do(cmd, z.keystr(key), max, min, "WITHSCORES", "LIMIT", offset, limit))
+		return redigo.Values(Do(cmd, z.keystr(key), maxstr, minstr, "WITHSCORES", "LIMIT", offset, limit))
 	} else {
-		return redigo.Values(Do(cmd, z.keystr(key), max, min, "LIMIT", offset, limit))
+		return redigo.Values(Do(cmd, z.keystr(key), maxstr, minstr, "LIMIT", offset, limit))
 	}
 }
 
@@ -118,8 +128,10 @@ func (z *Zsets) RangeStr(key interface{}, b, e int, rev, withscores bool) ([]str
 }
 
 func (z *Zsets) RangeByScoreStr(
-	key interface{}, max, min float64, offset, limit int, rev, withscores bool) ([]string, error) {
-	return redigo.Strings(z.RangeByScore(key, max, min, offset, limit, rev, withscores))
+	key interface{}, max float64, maxInclusive bool, min float64, minInclusive bool,
+	offset, limit int, rev, withscores bool) ([]string, error) {
+	return redigo.Strings(z.RangeByScore(
+		key, max, maxInclusive, min, minInclusive, offset, limit, rev, withscores))
 }
 
 func (z *Zsets) keystr(k interface{}) string {
