@@ -154,6 +154,7 @@ func doGetTicket() string {
 	ticket.TokenTicket = ret.Ticket
 	ticket.ExpiresIn = ret.ExpiresIn
 	ticket.ExpiresAt, ticket.RefreshAt = expireConv(ret.ExpiresIn)
+	ticket.store()
 	return ticket.TokenTicket
 }
 
