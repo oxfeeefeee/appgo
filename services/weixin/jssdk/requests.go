@@ -4,46 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/oxfeeefeee/appgo/toolkit/strutil"
 	"github.com/parnurzeal/gorequest"
-	"sync"
 	"time"
 )
-
-const (
-	accessTokenUrl = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s`
-	ticketUrl      = `https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token=%s`
-)
-
-var (
-	token  *atData
-	ticket *ticketData
-)
-
-func init() {
-	now := time.Now()
-	token = &atData{
-		expiresAt: now,
-		refreshAt: now,
-	}
-	ticket = &ticketData{
-		expiresAt: now,
-		refreshAt: now,
-	}
-}
-
-type atData struct {
-	accessToken string
-	expiresAt   time.Time
-	refreshAt   time.Time
-	sync.RWMutex
-}
-
-type ticketData struct {
-	ticket    string
-	expiresAt time.Time
-	refreshAt time.Time
-	sync.RWMutex
-}
 
 type accessTokenReturn struct {
 	ErrCode     int    `json:"errcode"`
@@ -59,30 +23,62 @@ type ticketReturn struct {
 	ExpiresIn int    `json:"expires_in"`
 }
 
+type tokenTicketData struct {
+	StoreKey    string
+	TokenTicket string
+	ExpiresAt   time.Time
+	RefreshAt   time.Time
+	ExpiresIn   int
+}
+
+func (t *tokenTicketData) store() {
+	str := strutil.FromObject(t)
+	err := kvStore.Set(t.StoreKey, str, t.ExpiresIn)
+	if err != nil {
+		log.Errorln("kvStore set error: ", err)
+	}
+}
+
+func readData(key string) *tokenTicketData {
+	data, err := kvStore.Get(key)
+	if err != nil {
+		log.Errorln("kvStore get error: ", err)
+		return nil
+	}
+	if data == "" {
+		return nil
+	}
+	var td tokenTicketData
+	strutil.ToObject(&td, data)
+	return &td
+}
+
 func getToken() string {
-	now := time.Now()
-	token.RLock()
-	if token.expiresAt.Before(now) {
-		token.RUnlock()
+	token := readData(tokenStoreKey)
+	if token == nil {
 		return doGetToken()
-	} else if token.refreshAt.Before(now) {
+	}
+	now := time.Now()
+	if token.ExpiresAt.Before(now) {
+		return doGetToken()
+	} else if token.RefreshAt.Before(now) {
 		go doGetToken()
 	}
-	defer token.RUnlock()
-	return token.accessToken
+	return token.TokenTicket
 }
 
 func getTicket() string {
-	now := time.Now()
-	ticket.RLock()
-	if ticket.expiresAt.Before(now) {
-		ticket.RUnlock()
+	ticket := readData(ticketStoreKey)
+	if ticket == nil {
 		return doGetTicket()
-	} else if ticket.refreshAt.Before(now) {
+	}
+	now := time.Now()
+	if ticket.ExpiresAt.Before(now) {
+		return doGetTicket()
+	} else if ticket.RefreshAt.Before(now) {
 		go doGetTicket()
 	}
-	defer ticket.RUnlock()
-	return ticket.ticket
+	return ticket.TokenTicket
 }
 
 func doGetToken() string {
@@ -114,11 +110,13 @@ func doGetToken() string {
 		}).Errorf("weixin token return error")
 		return ""
 	}
-	token.Lock()
-	defer token.Unlock()
-	token.accessToken = ret.AccessToken
-	token.expiresAt, token.refreshAt = expireConv(ret.ExpiresIn)
-	return token.accessToken
+	var token tokenTicketData
+	token.StoreKey = tokenStoreKey
+	token.TokenTicket = ret.AccessToken
+	token.ExpiresIn = ret.ExpiresIn
+	token.ExpiresAt, token.RefreshAt = expireConv(ret.ExpiresIn)
+	token.store()
+	return token.TokenTicket
 }
 
 func doGetTicket() string {
@@ -151,11 +149,12 @@ func doGetTicket() string {
 		}).Errorf("weixin ticket return error")
 		return ""
 	}
-	ticket.Lock()
-	defer ticket.Unlock()
-	ticket.ticket = ret.Ticket
-	ticket.expiresAt, ticket.refreshAt = expireConv(ret.ExpiresIn)
-	return ticket.ticket
+	var ticket tokenTicketData
+	ticket.StoreKey = ticketStoreKey
+	ticket.TokenTicket = ret.Ticket
+	ticket.ExpiresIn = ret.ExpiresIn
+	ticket.ExpiresAt, ticket.RefreshAt = expireConv(ret.ExpiresIn)
+	return ticket.TokenTicket
 }
 
 func expireConv(expIn int) (time.Time, time.Time) {

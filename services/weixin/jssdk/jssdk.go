@@ -10,9 +10,14 @@ import (
 )
 
 var (
-	appId      string
-	appSecret  string
-	signFormat = "jsapi_ticket=%s&noncestr=%s&timestamp=%d&url=%s"
+	appId          string
+	appSecret      string
+	kvStore        appgo.KvStore
+	tokenStoreKey  = "wxjssdk_token"
+	ticketStoreKey = "wxticket_token"
+	signFormat     = "jsapi_ticket=%s&noncestr=%s&timestamp=%d&url=%s"
+	accessTokenUrl = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s`
+	ticketUrl      = `https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token=%s`
 )
 
 type WxConfig struct {
@@ -24,9 +29,10 @@ type WxConfig struct {
 	JsApiList []string `json:"jsApiList"`
 }
 
-func init() {
+func Init(kvs appgo.KvStore) {
 	appId = appgo.Conf.WeixinJssdk.AppId
 	appSecret = appgo.Conf.WeixinJssdk.Secret
+	kvStore = kvs
 }
 
 func GetConfig(url string) *WxConfig {
