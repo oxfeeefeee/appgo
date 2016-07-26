@@ -87,8 +87,10 @@ var Conf struct {
 		}
 	}
 	Leancloud struct {
-		AppId  string
-		AppKey string
+		AppId              string
+		AppKey             string
+		AndroidAction      string
+		ExpirationInterval int
 	}
 	Graylog struct {
 		Ip       string

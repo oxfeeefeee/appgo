@@ -76,7 +76,7 @@ type PushData struct {
 
 type Pusher interface {
 	Name() string
-	PushNotif(platform Platform, tokens []string, content *PushData)
+	PushNotif(pushInfo map[Id]*PushInfo, content *PushData)
 }
 
 func init() {

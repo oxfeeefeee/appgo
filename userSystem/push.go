@@ -7,50 +7,21 @@ import (
 	"github.com/oxfeeefeee/appgo"
 )
 
-const (
-	pushBatchSize = 450
-)
-
 func (u *UserSystem) PushTo(users []appgo.Id, content *appgo.PushData) {
-	doPush := func(ids []appgo.Id) {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Errorln("Push notification paniced: ", r)
-			}
-		}()
-		if tokens, err := u.GetPushTokens(ids); err != nil {
-			log.WithFields(log.Fields{
-				"users": ids,
-				"error": err,
-			}).Errorln("failed to GetPushTokens")
-		} else {
-			for prov, data := range tokens {
-				pusher := u.DefaultPusher
-				if p, ok := u.Pushers[prov]; ok {
-					pusher = p
-				}
-				for plat, tokens := range data {
-					log.WithFields(log.Fields{
-						"platform": plat,
-						"tokens":   tokens,
-						"content":  content,
-					}).Infoln("begin push")
-					pusher.PushNotif(plat, tokens, content)
-					log.WithFields(log.Fields{
-						"platform": plat,
-						"tokens":   tokens,
-						"content":  content,
-					}).Infoln("end push")
-				}
-			}
-		}
+	tokens, err := u.GetPushTokens(users)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"users": users,
+			"error": err,
+		}).Errorln("failed to GetPushTokens")
+		return
 	}
-	for i := 0; i < len(users); i += pushBatchSize {
-		end := i + pushBatchSize
-		if end > len(users) {
-			end = len(users)
+	for provider, info := range tokens {
+		pusher := u.DefaultPusher
+		if p, ok := u.Pushers[provider]; ok {
+			pusher = p
 		}
-		go doPush(users[i:end])
+		pusher.PushNotif(info, content)
 	}
 }
 
@@ -68,23 +39,24 @@ func (u *UserSystem) SetPushToken(id appgo.Id, platform appgo.Platform,
 	return u.db.Model(user).Updates(update).Error
 }
 
-func (u *UserSystem) GetPushTokens(ids []appgo.Id) (map[string]map[appgo.Platform][]string, error) {
+func (u *UserSystem) GetPushTokens(ids []appgo.Id) (map[string]map[appgo.Id]*appgo.PushInfo, error) {
 	var users []*UserModel
 	if err := u.db.Select("platform, push_provider, push_token").
 		Where("id in (?)", ids).Find(&users).Error; err != nil {
 		return nil, err
 	}
-	ret := make(map[string]map[appgo.Platform][]string)
+	ret := make(map[string]map[appgo.Id]*appgo.PushInfo)
 	for _, user := range users {
 		plat, prov, token := user.Platform, user.PushProvider.String, user.PushToken.String
 		if plat != 0 && prov != "" && token != "" {
 			if _, ok := ret[prov]; !ok {
-				ret[prov] = make(map[appgo.Platform][]string)
+				ret[prov] = make(map[appgo.Id]*appgo.PushInfo)
 			}
-			if _, ok := ret[prov][plat]; !ok {
-				ret[prov][plat] = make([]string, 0)
+			ret[prov][user.Id] = &appgo.PushInfo{
+				Platform: plat,
+				Provider: prov,
+				Token:    token,
 			}
-			ret[prov][plat] = append(ret[prov][plat], token)
 		}
 	}
 	return ret, nil

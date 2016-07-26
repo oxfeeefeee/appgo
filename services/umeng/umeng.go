@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	sendMethod = "POST"
-	sendUrl    = "http://msg.umeng.com/api/send"
+	sendMethod      = "POST"
+	sendUrl         = "http://msg.umeng.com/api/send"
+	push_batch_size = 450
 )
 
 var (
@@ -84,19 +85,44 @@ func (_ Umeng) Name() string {
 	return "umeng"
 }
 
-func (_ Umeng) PushNotif(platform appgo.Platform, tokens []string, content *appgo.PushData) {
-	var payload interface{}
-	var appkey, secret string
-	if platform == appgo.PlatformIos {
-		payload = buildIosPayload(content)
-		appkey, secret = iosAppKey, iosSecret
-	} else if platform == appgo.PlatformAndroid {
-		payload = buildAndroidPayload(content)
-		appkey, secret = androidAppKey, androidSecret
+func (u Umeng) PushNotif(pushInfo map[appgo.Id]*appgo.PushInfo, content *appgo.PushData) {
+	iosTokens := make([]string, 0, len(pushInfo))
+	androidTokens := make([]string, 0, len(pushInfo))
+	for _, pi := range pushInfo {
+		if pi.Platform == appgo.PlatformIos {
+			iosTokens = append(iosTokens, pi.Token)
+		} else if pi.Platform == appgo.PlatformAndroid {
+			androidTokens = append(androidTokens, pi.Token)
+		}
 	}
-	if payload == nil {
-		return
+	iosPayload := buildIosPayload(content)
+	androidPayload := buildAndroidPayload(content)
+	if iosPayload != nil && len(iosTokens) > 0 {
+		for i := 0; i < len(iosTokens); i += push_batch_size {
+			end := i + push_batch_size
+			if end > len(iosTokens) {
+				end = len(iosTokens)
+			}
+			go u.doPushNotif(iosTokens[i:end], iosPayload, iosAppKey, iosSecret)
+		}
 	}
+	if androidPayload != nil && len(androidTokens) > 0 {
+		for i := 0; i < len(androidTokens); i += push_batch_size {
+			end := i + push_batch_size
+			if end > len(androidTokens) {
+				end = len(androidTokens)
+			}
+			go u.doPushNotif(androidTokens[i:end], androidPayload, androidAppKey, androidSecret)
+		}
+	}
+}
+
+func (_ Umeng) doPushNotif(tokens []string, payload interface{}, appkey, secret string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("doPushNotif paniced: ", r)
+		}
+	}()
 	tokenstr := strings.Join(tokens, ",")
 	data := getAllData(appkey, tokenstr, payload)
 	jdata, err := json.Marshal(data)

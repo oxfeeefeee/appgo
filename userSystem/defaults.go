@@ -30,7 +30,6 @@ func (s defaultPusher) Name() string {
 	return "default"
 }
 
-func (s defaultPusher) PushNotif(
-	platform appgo.Platform, tokens []string, content *appgo.PushData) {
-	log.Infoln("PushNotif: ", platform, ", ", tokens, ", ", content)
+func (s defaultPusher) PushNotif(pushInfo map[appgo.Id]*appgo.PushInfo, content *appgo.PushData) {
+	log.Infoln("PushNotif: ", pushInfo, ", ", content)
 }
