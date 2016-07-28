@@ -15,7 +15,7 @@ import (
 const (
 	sendMethod      = "POST"
 	sendUrl         = "http://msg.umeng.com/api/send"
-	push_batch_size = 450
+	push_batch_size = 500
 )
 
 var (

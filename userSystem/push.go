@@ -5,6 +5,7 @@ import (
 	"errors"
 	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
+	"strings"
 )
 
 func (u *UserSystem) PushTo(users []appgo.Id, content *appgo.PushData) {
@@ -40,9 +41,14 @@ func (u *UserSystem) SetPushToken(id appgo.Id, platform appgo.Platform,
 }
 
 func (u *UserSystem) GetPushTokens(ids []appgo.Id) (map[string]map[appgo.Id]*appgo.PushInfo, error) {
+	idstrs := make([]string, 0, len(ids))
+	for _, id := range ids {
+		idstrs = append(idstrs, id.String())
+	}
+	where := "id in (" + strings.Join(idstrs, ",") + ")"
 	var users []*UserModel
-	if err := u.db.Select("platform, push_provider, push_token").
-		Where("id in (?)", ids).Find(&users).Error; err != nil {
+	if err := u.db.Select("id, platform, push_provider, push_token").
+		Where(where).Find(&users).Error; err != nil {
 		return nil, err
 	}
 	ret := make(map[string]map[appgo.Id]*appgo.PushInfo)

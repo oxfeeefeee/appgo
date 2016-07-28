@@ -126,10 +126,11 @@ func buildPayload(content *appgo.PushData) *IosAndroidData {
 }
 
 func request(p *LeancloudPush) {
-	_, ret, errs := gorequest.New().Post(sendUrl).
+	_, ret, errs := gorequest.New().SetDebug(true).
+		Post(sendUrl).
 		Set("X-LC-Id", appId).
 		Set("X-LC-Key", appKey).
-		Send(p).
+		SendStruct(p).
 		End()
 	if errs != nil {
 		log.WithFields(log.Fields{
