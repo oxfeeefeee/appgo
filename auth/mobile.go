@@ -20,6 +20,7 @@ type MobileUserInfo struct {
 	Mobile   string
 	Token    string
 	Nickname string
+	Portrait string
 	Password string
 	Sex      appgo.Sex
 }

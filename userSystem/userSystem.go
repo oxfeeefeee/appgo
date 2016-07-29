@@ -304,6 +304,7 @@ func (u *UserSystem) AddMobileUser(info *auth.MobileUserInfo) (appgo.Id, error) 
 			PasswordSalt: salt,
 			PasswordHash: hash[:],
 			Nickname:     database.SqlStr(info.Nickname),
+			Portrait:     database.SqlStr(info.Portrait),
 			Sex:          info.Sex,
 		}
 		return u.saveUser(user)
