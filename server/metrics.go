@@ -35,7 +35,7 @@ func (m *Metrics) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.H
 	}
 	err := m.zsets.BatchIncrby(params)
 	if err != nil {
-		log.WithField("params", params).Errorln("BatchIncrby error")
+		log.WithField("params", params).Errorln("BatchIncrby error: ", err)
 	}
 }
 
