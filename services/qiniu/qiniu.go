@@ -15,17 +15,10 @@ import (
 var (
 	bucketName string
 	domain     string
+	useHttps   bool
 	putPolicy  rs.PutPolicy
 	getPolicy  rs.GetPolicy
 )
-
-type QiniuParams struct {
-	AccessKey      string
-	Secret         string
-	Bucket         string
-	Domain         string
-	DefaultExpires int
-}
 
 func init() {
 	params := appgo.Conf.Qiniu
@@ -33,6 +26,7 @@ func init() {
 	conf.SECRET_KEY = params.Secret
 	bucketName = params.Bucket
 	domain = params.Domain
+	useHttps = params.UseHttps
 	putPolicy = rs.PutPolicy{
 		Expires:    uint32(params.DefaultExpires),
 		InsertOnly: 1,
@@ -82,7 +76,11 @@ func PutFile(key string, r io.Reader, size int64) (string, error) {
 
 func makeBaseUrl(key string) string {
 	//return rs.MakeBaseUrl(domain, key)
-	return "http://" + domain + "/" + qnurl.Escape(key)
+	p := "http"
+	if useHttps {
+		p = "https"
+	}
+	return p + "://" + domain + "/" + qnurl.Escape(key)
 }
 
 func makeRequest(baseUrl string, expiryUnix int64, mac *qndigest.Mac) (privateUrl string) {

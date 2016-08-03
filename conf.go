@@ -75,6 +75,7 @@ var Conf struct {
 		Bucket         string
 		Domain         string
 		DefaultExpires int
+		UseHttps       bool
 	}
 	Umeng struct {
 		Android struct {
