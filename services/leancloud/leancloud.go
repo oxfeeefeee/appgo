@@ -50,9 +50,11 @@ type IosData struct {
 
 type AndroidData struct {
 	Alert     string      `json:"alert,omitempty"`
+	Alert2    string      `json:"alert2,omitempty"`
 	Title     string      `json:"title,omitempty"`
 	Action    string      `json:"action,omitempty"`
-	PlaySound bool        `json:"play_sound,omitempty"`
+	PlaySound bool        `json:"play_sound"`
+	Silent    bool        `json:"silent"`
 	Custom    interface{} `json:"custom,omitempty"`
 }
 
@@ -77,25 +79,25 @@ func (_ Leancloud) Name() string {
 func (l Leancloud) PushNotif(pushInfo map[appgo.Id]*appgo.PushInfo, content *appgo.PushData) {
 	userIds := make([]string, 0, len(pushInfo))
 	for uid, _ := range pushInfo {
-		userIds = append(userIds, uid.String())
+		userIds = append(userIds, "\""+uid.String()+"\"")
 	}
 	for i := 0; i < len(userIds); i += push_batch_size {
 		end := i + push_batch_size
 		if end > len(userIds) {
 			end = len(userIds)
 		}
-		go l.doPushNotif(userIds[i:end], content)
+		idstr := strings.Join(userIds[i:end], ",")
+		go l.doPushNotif(idstr, content)
 	}
 }
 
-func (_ Leancloud) doPushNotif(ids []string, content *appgo.PushData) {
+func (_ Leancloud) doPushNotif(ids string, content *appgo.PushData) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorln("doPushNotif paniced: ", r)
 		}
 	}()
-	idstr := strings.Join(ids, ",")
-	cql := "select * from _Installation where userId in ( " + idstr + " )"
+	cql := "select * from _Installation where userId in ( " + ids + " )"
 	pl := buildPayload(content)
 	request(&LeancloudPush{
 		ExpirationInterval: expiration,
@@ -117,9 +119,11 @@ func buildPayload(content *appgo.PushData) *IosAndroidData {
 		},
 		&AndroidData{
 			Alert:     content.Message,
+			Alert2:    content.Message,
 			Title:     content.Title,
 			Action:    androidAction,
 			PlaySound: len(content.Sound) > 0,
+			Silent:    true,
 			Custom:    content.Custom,
 		},
 	}
