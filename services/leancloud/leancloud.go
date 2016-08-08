@@ -46,6 +46,7 @@ type IosData struct {
 	Badge            int           `json:"badge,omitempty"`
 	Sound            string        `json:"sound,omitempty"`
 	ContentAvailable int           `json:"content-available,omitempty"`
+	Custom           interface{}   `json:"custom,omitempty"`
 }
 
 type AndroidData struct {
@@ -114,8 +115,9 @@ func buildPayload(content *appgo.PushData) *IosAndroidData {
 				Title: content.Title,
 				Body:  content.Message,
 			},
-			Badge: content.Badge,
-			Sound: content.Sound,
+			Badge:  content.Badge,
+			Sound:  content.Sound,
+			Custom: content.Custom,
 		},
 		&AndroidData{
 			Alert:     content.Message,
