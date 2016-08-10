@@ -20,7 +20,7 @@ var Conf struct {
 		Enable bool
 		Port   string
 	}
-	Mysql struct {
+	Mysql []struct {
 		Host        string
 		Port        string
 		User        string
