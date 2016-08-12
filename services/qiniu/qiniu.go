@@ -1,6 +1,7 @@
 package qiniu
 
 import (
+	"encoding/base64"
 	"github.com/oxfeeefeee/appgo"
 	qndigest "github.com/qiniu/api.v6/auth/digest"
 	"github.com/qiniu/api.v6/conf"
@@ -72,6 +73,14 @@ func PutFile(key string, r io.Reader, size int64) (string, error) {
 	} else {
 		return makeBaseUrl(key), nil
 	}
+}
+
+func FetchToken(url, key string) (string, string) {
+	encodedUrl := base64.StdEncoding.EncodeToString([]byte(url))
+	encodedTo := base64.StdEncoding.EncodeToString([]byte(bucketName + ":" + key))
+	fullPath := "/fetch/" + encodedUrl + "/to/" + encodedTo
+	token := qndigest.Sign(nil, []byte(fullPath))
+	return fullPath, token
 }
 
 func makeBaseUrl(key string) string {
