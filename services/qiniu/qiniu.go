@@ -1,6 +1,8 @@
 package qiniu
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
 	"encoding/base64"
 	"github.com/oxfeeefeee/appgo"
 	qndigest "github.com/qiniu/api.v6/auth/digest"
@@ -75,12 +77,16 @@ func PutFile(key string, r io.Reader, size int64) (string, error) {
 	}
 }
 
-func FetchToken(url, key string) (string, string) {
-	encodedUrl := base64.StdEncoding.EncodeToString([]byte(url))
-	encodedTo := base64.StdEncoding.EncodeToString([]byte(bucketName + ":" + key))
+func FetchToken(url, key string) (string, string, string) {
+	encodedUrl := base64.URLEncoding.EncodeToString([]byte(url))
+	encodedTo := base64.URLEncoding.EncodeToString([]byte(bucketName + ":" + key))
 	fullPath := "/fetch/" + encodedUrl + "/to/" + encodedTo
-	token := qndigest.Sign(nil, []byte(fullPath))
-	return fullPath, token
+
+	h := hmac.New(sha1.New, []byte(conf.SECRET_KEY))
+	io.WriteString(h, fullPath+"\n")
+	sign := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	token := conf.ACCESS_KEY + ":" + sign
+	return fullPath, makeBaseUrl(key), token
 }
 
 func makeBaseUrl(key string) string {
