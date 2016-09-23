@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	gkmetrics "github.com/go-kit/kit/metrics"
 	gkprometheus "github.com/go-kit/kit/metrics/prometheus"
@@ -15,6 +16,7 @@ import (
 	"github.com/unrolled/render"
 	"net/http"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -37,6 +39,8 @@ const (
 var decoder = schema.NewDecoder()
 
 var metrics_req_dur gkmetrics.Histogram
+
+var metrics_query_count map[string]gkmetrics.Counter
 
 type HandlerType int
 
@@ -67,21 +71,24 @@ func init() {
 	decoder.IgnoreUnknownKeys(true)
 
 	if appgo.Conf.Prometheus.Enable {
-		metrics_req_dur = gkprometheus.NewSummary(stdprometheus.SummaryOpts{
+		metrics_req_dur = gkprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 			Namespace: "appgo",
-			Subsystem: "api",
+			Subsystem: "http",
 			Name:      "request_duration_microseconds",
 			Help:      "Total time spent serving requests.",
 		}, []string{})
+		metrics_query_count = map[string]gkmetrics.Counter{
+			"all": gkprometheus.NewCounterFrom(stdprometheus.CounterOpts{
+				Namespace: "appgo",
+				Subsystem: "http",
+				Name:      "request_counter",
+				Help:      "Total served requests count.",
+			}, []string{})}
 	}
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer func(begin time.Time) {
-		if appgo.Conf.Prometheus.Enable {
-			metrics_req_dur.Observe(int64(time.Since(begin) / time.Microsecond))
-		}
-	}(time.Now())
+	defer addMetrics(r, time.Now())
 
 	method := r.Method
 	ver := apiVersionFromHeader(r)
@@ -192,6 +199,31 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.renderError(w, aerr)
 		}
 	}
+}
+
+func addMetrics(r *http.Request, begin time.Time) {
+	if !appgo.Conf.Prometheus.Enable {
+		return
+	}
+	metrics_req_dur.Observe(float64(time.Since(begin) / time.Microsecond))
+
+	path := r.RequestURI
+	if i := strings.IndexByte(path, '?'); i > 0 {
+		path = path[:i]
+	}
+	path = strings.Replace(path, "/", "_", -1)
+	key := r.Method + path
+	if _, ok := metrics_query_count[key]; !ok {
+		metrics_query_count[key] = gkprometheus.NewCounterFrom(stdprometheus.CounterOpts{
+			Namespace: "appgo",
+			Subsystem: "http",
+			Name:      "request_counter_" + key,
+			Help:      fmt.Sprintf("Total served %s requests count.", key),
+		}, []string{})
+	}
+	metrics_query_count["all"].Add(1)
+	metrics_query_count[key].Add(1)
+
 }
 
 func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
