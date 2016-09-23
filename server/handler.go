@@ -4,14 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	log "github.com/Sirupsen/logrus"
+	gkmetrics "github.com/go-kit/kit/metrics"
+	gkprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
 	"github.com/oxfeeefeee/appgo/toolkit/strutil"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/unrolled/render"
 	"net/http"
 	"reflect"
+	"time"
 )
 
 const (
@@ -31,6 +35,8 @@ const (
 )
 
 var decoder = schema.NewDecoder()
+
+var metrics_req_dur gkmetrics.Histogram
 
 type HandlerType int
 
@@ -59,9 +65,24 @@ type handler struct {
 
 func init() {
 	decoder.IgnoreUnknownKeys(true)
+
+	if appgo.Conf.Prometheus.Enable {
+		metrics_req_dur = gkprometheus.NewSummary(stdprometheus.SummaryOpts{
+			Namespace: "appgo",
+			Subsystem: "api",
+			Name:      "request_duration_seconds",
+			Help:      "Total time spent serving requests.",
+		}, []string{})
+	}
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func(begin time.Time) {
+		if appgo.Conf.Prometheus.Enable {
+			metrics_req_dur.Observe(int64(time.Since(begin).Seconds()))
+		}
+	}(time.Now())
+
 	method := r.Method
 	ver := apiVersionFromHeader(r)
 	if ver > 1 && ver <= maxVersion {

@@ -98,6 +98,10 @@ var Conf struct {
 		Port     string
 		Facility string
 	}
+	Prometheus struct {
+		Enable bool
+		Port   string
+	}
 }
 
 func initConfig() {

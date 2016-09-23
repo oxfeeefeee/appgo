@@ -8,6 +8,7 @@ import (
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/auth"
 	"github.com/phyber/negroni-gzip/gzip"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/cors"
 	"github.com/unrolled/render"
 	"html/template"
@@ -100,6 +101,13 @@ func (s *Server) Serve() {
 	if appgo.Conf.Pprof.Enable {
 		go func() {
 			log.Infoln(http.ListenAndServe(":"+appgo.Conf.Pprof.Port, nil))
+		}()
+	}
+	if appgo.Conf.Prometheus.Enable {
+		go func() {
+			mux := http.NewServeMux()
+			mux.Handle("/metrics", prometheus.Handler())
+			log.Infoln(http.ListenAndServe(":"+appgo.Conf.Prometheus.Port, mux))
 		}()
 	}
 
