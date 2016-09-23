@@ -70,7 +70,7 @@ func init() {
 		metrics_req_dur = gkprometheus.NewSummary(stdprometheus.SummaryOpts{
 			Namespace: "appgo",
 			Subsystem: "api",
-			Name:      "request_duration_seconds",
+			Name:      "request_duration_microseconds",
 			Help:      "Total time spent serving requests.",
 		}, []string{})
 	}
@@ -79,7 +79,7 @@ func init() {
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func(begin time.Time) {
 		if appgo.Conf.Prometheus.Enable {
-			metrics_req_dur.Observe(int64(time.Since(begin).Seconds()))
+			metrics_req_dur.Observe(int64(time.Since(begin) / time.Microsecond))
 		}
 	}(time.Now())
 
