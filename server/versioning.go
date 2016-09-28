@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	log "github.com/Sirupsen/logrus"
+	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/toolkit"
 	"io"
 	"os"
@@ -27,6 +28,10 @@ func (v *versioning) addMap(prefix, dir string) {
 }
 
 func (v *versioning) getStatic(path string) string {
+	return "//" + appgo.Conf.CdnDomain + v.getStaticPathParam(path)
+}
+
+func (v *versioning) getStaticPathParam(path string) string {
 	if h := v.hashCache.GetString(path); h != "" {
 		return path + "?ver=" + h
 	}

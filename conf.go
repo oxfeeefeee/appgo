@@ -16,6 +16,7 @@ var Conf struct {
 	LogLevel     log.Level
 	RootKey      string
 	TemplatePath string
+	CdnDomain    string
 	Pprof        struct {
 		Enable bool
 		Port   string
