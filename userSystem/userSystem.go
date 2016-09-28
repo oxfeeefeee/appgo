@@ -286,6 +286,9 @@ func (u *UserSystem) GetMobileUser(mobile, password string) (appgo.Id, error) {
 		}
 		return 0, db.Error
 	}
+	if len(user.PasswordSalt) == 0 || len(user.PasswordHash) == 0 {
+		return 0, errors.New("password not set yet")
+	}
 	hash := crypto.SaltedHash(user.PasswordSalt, password)
 	if !bytes.Equal(hash[:], user.PasswordHash) {
 		return 0, appgo.InvalidPasswordErr
@@ -329,6 +332,20 @@ func (u *UserSystem) UpdatePwByMobile(mobile, password string) error {
 		}
 		return nil
 	}
+}
+
+func (u *UserSystem) SetMobileForUser(mobile string, userId appgo.Id) error {
+	user := &UserModel{Id: userId}
+	var updates UserModel
+	updates.Mobile = sql.NullString{mobile, true}
+	if err := u.db.Model(user).Updates(&updates).Error; err != nil {
+		log.WithFields(log.Fields{
+			"id":        userId,
+			"gormError": err,
+		}).Errorln("failed to update mobile")
+		return appgo.InternalErr
+	}
+	return nil
 }
 
 func (u *UserSystem) UpdateAppToken(id appgo.Id, role appgo.Role) (string, error) {

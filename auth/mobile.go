@@ -30,6 +30,7 @@ type MobileSupport interface {
 	GetMobileUser(mobile, password string) (uid appgo.Id, err error)
 	AddMobileUser(info *MobileUserInfo) (uid appgo.Id, err error)
 	UpdatePwByMobile(mobile, password string) error
+	SetMobileForUser(mobile string, userId appgo.Id) error
 	appgo.MobileMsgSender
 	appgo.KvStore
 }
@@ -40,11 +41,11 @@ func MobilePreRegister(mobile string) (string, error) {
 	} else if has {
 		return "", appgo.MobileUserAlreadyExistsErr
 	}
-	return sendSmsCode(mobile, appgo.SmsTemplateRegister)
+	return sendSmsCode(mobile, 0, appgo.SmsTemplateRegister)
 }
 
 func MobileVerifyRegister(mobile, code string) (string, error) {
-	if err := verifySmsCode(mobile, code); err != nil {
+	if err := verifySmsCode(mobile, 0, code); err != nil {
 		return "", err
 	}
 	token := crypto.RandNumStr(mobileTokenLen)
@@ -53,6 +54,22 @@ func MobileVerifyRegister(mobile, code string) (string, error) {
 		return "", err
 	}
 	return token, nil
+}
+
+func MobilePreSet(mobile string, id appgo.Id) (string, error) {
+	if has, err := mobileSupport.HasMobileUser(mobile); err != nil {
+		return "", err
+	} else if has {
+		return "", appgo.MobileUserAlreadyExistsErr
+	}
+	return sendSmsCode(mobile, id, appgo.SmsTemplateSetMobile)
+}
+
+func MobileVerifySet(mobile string, id appgo.Id, code string) error {
+	if err := verifySmsCode(mobile, id, code); err != nil {
+		return err
+	}
+	return mobileSupport.SetMobileForUser(mobile, id)
 }
 
 func MobileRegisterUser(info *MobileUserInfo, role appgo.Role) (*LoginResult, error) {
@@ -76,11 +93,11 @@ func MobilePwReset(mobile string) (string, error) {
 	} else if !has {
 		return "", appgo.MobileUserNotFoundErr
 	}
-	return sendSmsCode(mobile, appgo.SmsTemplatePwReset)
+	return sendSmsCode(mobile, 0, appgo.SmsTemplatePwReset)
 }
 
 func MobileVerifyPwReset(mobile, code, password string) error {
-	if err := verifySmsCode(mobile, code); err != nil {
+	if err := verifySmsCode(mobile, 0, code); err != nil {
 		return err
 	}
 	if err := mobileSupport.UpdatePwByMobile(mobile, password); err != nil {
@@ -103,17 +120,17 @@ func LoginByMobile(mobile, password string, role appgo.Role) (*LoginResult, erro
 	return checkIn(uid, role)
 }
 
-func sendSmsCode(mobile string, template appgo.SmsTemplate) (string, error) {
+func sendSmsCode(mobile string, id appgo.Id, template appgo.SmsTemplate) (string, error) {
 	code := crypto.RandNumStr(mobileCodeLen)
 	if err := mobileSupport.Set(
-		mobileCodeKeyPrefix+mobile, code, mobileCodeTimeout); err != nil {
+		smsCodeKey(mobile, id), code, mobileCodeTimeout); err != nil {
 		return "", err
 	}
 	return code, mobileSupport.SendMobileCode(mobile, template, code)
 }
 
-func verifySmsCode(mobile, code string) error {
-	scode, err := mobileSupport.Get(mobileCodeKeyPrefix + mobile)
+func verifySmsCode(mobile string, id appgo.Id, code string) error {
+	scode, err := mobileSupport.Get(smsCodeKey(mobile, id))
 	if err != nil {
 		return err
 	}
@@ -121,4 +138,12 @@ func verifySmsCode(mobile, code string) error {
 		return appgo.MobileUserBadCodeErr
 	}
 	return nil
+}
+
+func smsCodeKey(mobile string, id appgo.Id) string {
+	key := mobileCodeKeyPrefix + mobile
+	if id != 0 {
+		key = mobileCodeKeyPrefix + mobile + "_" + id.String()
+	}
+	return key
 }

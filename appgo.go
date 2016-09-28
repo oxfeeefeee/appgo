@@ -34,6 +34,7 @@ const (
 	_ SmsTemplate = iota
 	SmsTemplateRegister
 	SmsTemplatePwReset
+	SmsTemplateSetMobile
 )
 
 type SmsTemplate int
