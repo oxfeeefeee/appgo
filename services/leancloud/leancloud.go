@@ -112,7 +112,7 @@ func buildPayload(content *appgo.PushData) *IosAndroidData {
 	return &IosAndroidData{
 		&IosData{
 			Alert: &IosApnsAlert{
-				Title: content.Title,
+				Title: "",
 				Body:  content.Message,
 			},
 			Badge:  content.Badge,
