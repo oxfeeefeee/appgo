@@ -69,6 +69,7 @@ type LeancloudPush struct {
 	Prod               string          `json:"prod,omitempty"`
 	Data               *IosAndroidData `json:"data,omitempty"`
 	Cql                string          `json:"cql,omitempty"`
+	Channels           []string        `json:"channels,omitempty"`
 }
 
 type Leancloud struct{}
@@ -105,6 +106,25 @@ func (_ Leancloud) doPushNotif(ids string, content *appgo.PushData) {
 		Prod:               prod,
 		Data:               pl,
 		Cql:                cql,
+	})
+}
+
+func (l Leancloud) PushToChannel(channel string, content *appgo.PushData) {
+	go l.doPushToChannel(channel, content)
+}
+
+func (_ Leancloud) doPushToChannel(channel string, content *appgo.PushData) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("doPushToChannel paniced: ", r)
+		}
+	}()
+	pl := buildPayload(content)
+	request(&LeancloudPush{
+		ExpirationInterval: expiration,
+		Prod:               prod,
+		Data:               pl,
+		Channels:           []string{channel},
 	})
 }
 
