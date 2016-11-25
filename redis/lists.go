@@ -8,7 +8,7 @@ type Lists struct {
 	namespace string
 }
 
-func NewList(namespace string) *Lists {
+func NewLists(namespace string) *Lists {
 	return &Lists{namespace}
 }
 
