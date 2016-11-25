@@ -3,7 +3,7 @@ package appgo
 import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"gopkg.in/gemnasium/logrus-graylog-hook.v1"
+	// "gopkg.in/gemnasium/logrus-graylog-hook.v1"
 	"io"
 	"os"
 	"path/filepath"
@@ -24,9 +24,9 @@ func InitLogHooks(skip int) {
 		rootDir := filepath.Dir(file)
 		fiHook := &FileInfoHook{rootDir}
 		logrus.AddHook(fiHook)
-		gladdr := Conf.Graylog.Ip + ":" + Conf.Graylog.Port
-		glhook := graylog.NewGraylogHook(gladdr, Conf.Graylog.Facility, nil)
-		logrus.AddHook(glhook)
+		// gladdr := Conf.Graylog.Ip + ":" + Conf.Graylog.Port
+		// glhook := graylog.NewGraylogHook(gladdr, Conf.Graylog.Facility, nil)
+		// logrus.AddHook(glhook)
 	})
 }
 
