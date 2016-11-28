@@ -16,11 +16,11 @@ func (l *Lists) keyStr(k interface{}) string {
 	return fmt.Sprintf("%s:%v", l.namespace, k)
 }
 
-func (l *Lists) AllItems(k interface{}) ([]string, error) {
+func (l *Lists) AllItems(k interface{}) ([]interface{}, error) {
 	if items, err := Do("LRANGE", l.keyStr(k), 0, -1); err != nil {
 		return nil, err
 	} else {
-		return items.([]string), nil
+		return items.([]interface{}), nil
 	}
 }
 
