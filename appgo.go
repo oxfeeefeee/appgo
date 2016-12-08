@@ -16,6 +16,8 @@ const CustomVersionHeaderName = "X-Appgo-Api-Version"
 
 const CustomConfVerHeaderName = "X-Appgo-Conf-Version"
 
+const CustomAppVerHeaderName = "X-Appgo-App-Version"
+
 const (
 	RoleAppUser  Role = 100
 	RoleWebUser       = 101

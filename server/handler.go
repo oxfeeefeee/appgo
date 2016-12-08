@@ -27,6 +27,7 @@ const (
 	ContentFieldName     = "Content__"
 	RequestFieldName     = "Request__"
 	ConfVerFieldName     = "ConfVer__"
+	AppVerFieldName      = "AppVer__"
 
 	maxVersion = 99
 )
@@ -52,6 +53,7 @@ type httpFunc struct {
 	hasContent     bool
 	hasRequest     bool
 	hasConfVer     bool
+	hasAppVer      bool
 	dummyInput     bool
 	allowAnonymous bool
 	inputType      reflect.Type
@@ -177,6 +179,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f := s.FieldByName(ConfVerFieldName)
 		f.Set(reflect.ValueOf(ver))
 	}
+	if f.hasAppVer {
+		appVer := appVersionFromHeader(r)
+		s := input.Elem()
+		field := s.FieldByName(AppVerFieldName)
+		field.SetString(appVer)
+	}
+
 	argsIn := []reflect.Value{input}
 	returns := f.funcValue.Call(argsIn)
 	rl := len(returns)
@@ -254,6 +263,10 @@ func apiVersionFromHeader(r *http.Request) int {
 func confVersionFromHeader(r *http.Request) int64 {
 	v := r.Header.Get(appgo.CustomConfVerHeaderName)
 	return strutil.ToInt64(v)
+}
+
+func appVersionFromHeader(r *http.Request) string {
+	return r.Header.Get(appgo.CustomAppVerHeaderName)
 }
 
 func newHandler(funcSet interface{}, htype HandlerType,
@@ -379,7 +392,14 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 			return nil, errors.New("ConfVer needs to be Int64")
 		}
 	}
+	hasAppVer := false
+	if appVerType, ok := inputType.FieldByName(AppVerFieldName); ok {
+		hasAppVer = true
+		if appVerType.Type.Kind() != reflect.String {
+			return nil, errors.New("AppVer needs to be string")
+		}
+	}
 	return &httpFunc{requireAuth, requireAdmin,
-		hasResId, hasContent, hasRequest, hasConfVer,
+		hasResId, hasContent, hasRequest, hasConfVer, hasAppVer,
 		dummyInput, allowAnonymous, inputType, contentType, fieldVal}, nil
 }
