@@ -2,7 +2,7 @@ package auth
 
 import (
 	"errors"
-	///log "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
 )
@@ -122,8 +122,8 @@ func LoginByMobile(mobile, password string, role appgo.Role) (*LoginResult, erro
 
 func sendSmsCode(mobile string, id appgo.Id, template appgo.SmsTemplate) (string, error) {
 	code := crypto.RandNumStr(mobileCodeLen)
-	if err := mobileSupport.Set(
-		smsCodeKey(mobile, id), code, mobileCodeTimeout); err != nil {
+	if err := mobileSupport.Set(smsCodeKey(mobile, id), code, mobileCodeTimeout); err != nil {
+		log.Errorln("sendSmsCode, mobileSupport.Set() failed, err: ", err)
 		return "", err
 	}
 	return code, mobileSupport.SendMobileCode(mobile, template, code)
