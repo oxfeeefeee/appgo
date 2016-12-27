@@ -24,6 +24,14 @@ func (l *Lists) AllItems(k interface{}) ([]interface{}, error) {
 	}
 }
 
+func (l *Lists) LatestItems(k interface{}, num int) ([]interface{}, error) {
+	if items, err := Do("LRANGE", l.keyStr(k), 0, num); err != nil {
+		return nil, err
+	} else {
+		return items.([]interface{}), nil
+	}
+}
+
 func (l *Lists) Prepend(key interface{}, item interface{}) (int64, error) {
 	if newSize, err := Do("LPUSH", l.keyStr(key), item); err != nil {
 		return 0, err
