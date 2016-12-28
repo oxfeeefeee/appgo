@@ -28,6 +28,7 @@ const (
 	RequestFieldName     = "Request__"
 	ConfVerFieldName     = "ConfVer__"
 	AppVerFieldName      = "AppVer__"
+	PlatformFieldName    = "Platform__"
 
 	maxVersion = 99
 )
@@ -54,6 +55,7 @@ type httpFunc struct {
 	hasRequest     bool
 	hasConfVer     bool
 	hasAppVer      bool
+	hasPlatform    bool
 	dummyInput     bool
 	allowAnonymous bool
 	inputType      reflect.Type
@@ -185,6 +187,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		field := s.FieldByName(AppVerFieldName)
 		field.SetString(appVer)
 	}
+	if f.hasPlatform {
+		platform := platformFromHeader(r)
+		s := input.Elem()
+		field := s.FieldByName(PlatformFieldName)
+		field.SetString(platform)
+	}
 
 	argsIn := []reflect.Value{input}
 	returns := f.funcValue.Call(argsIn)
@@ -267,6 +275,10 @@ func confVersionFromHeader(r *http.Request) int64 {
 
 func appVersionFromHeader(r *http.Request) string {
 	return r.Header.Get(appgo.CustomAppVerHeaderName)
+}
+
+func platformFromHeader(r *http.Request) string {
+	return r.Header.Get(appgo.CustomPlatformHeaderName)
 }
 
 func newHandler(funcSet interface{}, htype HandlerType,
@@ -399,7 +411,14 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 			return nil, errors.New("AppVer needs to be string")
 		}
 	}
+	hasPlatform := false
+	if platformType, ok := inputType.FieldByName(PlatformFieldName); ok {
+		hasPlatform = true
+		if platformType.Type.Kind() != reflect.String {
+			return nil, errors.New("Platform needs to be string")
+		}
+	}
 	return &httpFunc{requireAuth, requireAdmin,
-		hasResId, hasContent, hasRequest, hasConfVer, hasAppVer,
+		hasResId, hasContent, hasRequest, hasConfVer, hasAppVer, hasPlatform,
 		dummyInput, allowAnonymous, inputType, contentType, fieldVal}, nil
 }

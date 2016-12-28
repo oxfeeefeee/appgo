@@ -18,6 +18,8 @@ const CustomConfVerHeaderName = "X-Appgo-Conf-Version"
 
 const CustomAppVerHeaderName = "X-Appgo-App-Version"
 
+const CustomPlatformHeaderName = "X-Appgo-Platform"
+
 const (
 	RoleAppUser  Role = 100
 	RoleWebUser       = 101
