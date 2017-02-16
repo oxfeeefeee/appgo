@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo/redis"
 	"net/http"
@@ -28,14 +29,22 @@ func newMetrics(schema MetricsSchema) *Metrics {
 func (m *Metrics) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	next(rw, r)
 
-	var params []redis.ZsetIncrbyParams
+	// var params []redis.ZsetIncrbyParams
+	// keys := m.schema.KeysGen(r)
+	// for k, v := range keys {
+	// 	params = append(params, redis.ZsetIncrbyParams{k, v, 1})
+	// }
+	// err := m.zsets.BatchIncrby(params)
+	// if err != nil {
+	// 	log.WithField("params", params).Errorln("BatchIncrby error: ", err)
+	// }
+
 	keys := m.schema.KeysGen(r)
 	for k, v := range keys {
-		params = append(params, redis.ZsetIncrbyParams{k, v, 1})
-	}
-	err := m.zsets.BatchIncrby(params)
-	if err != nil {
-		log.WithField("params", params).Errorln("BatchIncrby error: ", err)
+		if err := m.zsets.Incrby(k, 1, v); err != nil {
+			log.Errorln(fmt.Sprintf("ServeHTTP, incrby zset key: %s, val: %s failed, err: %v", k, v, err))
+			break
+		}
 	}
 }
 
