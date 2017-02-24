@@ -33,10 +33,12 @@ func (m *Metrics) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.H
 	for k, v := range keys {
 		params = append(params, redis2.ZsetIncrbyParams{k, v, 1})
 	}
-	err := m.zsets.BatchIncrby(params)
-	if err != nil {
-		log.WithField("params", params).Errorln("BatchIncrby error: ", err)
-	}
+	go func() {
+		err := m.zsets.BatchIncrby(params)
+		if err != nil {
+			log.WithField("params", params).Errorln("BatchIncrby metrics error: ", err)
+		}
+	}()
 }
 
 type DefaultSchema struct {
