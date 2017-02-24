@@ -1,4 +1,4 @@
-package redis
+package redis2
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ func (t *Trans) Exec() (reply interface{}, err error) {
 }
 
 func init() {
-	c := &appgo.Conf.Redis[0]
+	c := &appgo.Conf.Redis[1]
 	url := fmt.Sprintf("redis://%s:%s", c.Host, c.Port)
 	if c.Password != "" {
 		url = fmt.Sprintf("redis://:%s@%s:%s", c.Password, c.Host, c.Port)

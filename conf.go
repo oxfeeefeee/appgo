@@ -31,7 +31,7 @@ var Conf struct {
 		MaxConn     int
 		MaxLifetime int
 	}
-	Redis struct {
+	Redis []struct {
 		Host        string
 		Port        string
 		Password    string
