@@ -150,15 +150,20 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.SetInt(int64(user))
 	}
 	if f.requireAuthor {
-		authorId := h.authorIdFromHeader(r)
-		s := input.Elem()
-		f := s.FieldByName(AuthorIdFieldName)
+		authorId, expired := h.authorIdFromHeader(r)
 		if authorId == 0 {
 			h.renderError(w, appgo.NewApiErr(
 				appgo.ECodeUnauthorized,
 				"author role required, check if your header has correct author token"))
 			return
+		} else if expired {
+			h.renderError(w, appgo.NewApiErr(
+				appgo.ECodeUnauthorized,
+				"author token expired"))
+			return
 		}
+		s := input.Elem()
+		f := s.FieldByName(AuthorIdFieldName)
 		f.SetInt(int64(authorId))
 	}
 	if f.hasResId {
@@ -277,10 +282,13 @@ func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
 	return user, role
 }
 
-func (h *handler) authorIdFromHeader(r *http.Request) appgo.Id {
+func (h *handler) authorIdFromHeader(r *http.Request) (appgo.Id, bool) {
 	token := auth.Token(r.Header.Get(appgo.CustomAuthorTokenHeaderName))
-	authorId, _ := token.Validate()
-	return authorId
+	if authorId, _, expireAt, err := token.Parse(); err != nil {
+		return 0, false
+	} else {
+		return authorId, expireAt.Before(time.Now())
+	}
 }
 
 func apiVersionFromHeader(r *http.Request) int {

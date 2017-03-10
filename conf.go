@@ -53,6 +53,7 @@ var Conf struct {
 		AppUser  int
 		WebUser  int
 		WebAdmin int
+		Author   int
 	}
 	Weixin struct {
 		AppId  string
