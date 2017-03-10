@@ -150,7 +150,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.SetInt(int64(user))
 	}
 	if f.requireAuthor {
-		authorId, _ := h.authorIdFromHeader(r)
+		authorId := h.authorIdFromHeader(r)
 		s := input.Elem()
 		f := s.FieldByName(AuthorIdFieldName)
 		if authorId == 0 {
@@ -445,7 +445,7 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 			return nil, errors.New("Platform needs to be string")
 		}
 	}
-	return &httpFunc{requireAuth, requireAdmin,
+	return &httpFunc{requireAuth, requireAdmin, requireAuthor,
 		hasResId, hasContent, hasRequest, hasConfVer, hasAppVer, hasPlatform,
 		dummyInput, allowAnonymous, inputType, contentType, fieldVal}, nil
 }
