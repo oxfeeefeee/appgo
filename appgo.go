@@ -12,6 +12,8 @@ const InternalTestToken = "sjadfjlksadfjkljfwoeifshgsdhgsldfjf"
 
 const CustomTokenHeaderName = "X-Appgo-Token"
 
+const CustomAuthorTokenHeaderName = "X-Appgo-Author-Token"
+
 const CustomVersionHeaderName = "X-Appgo-Api-Version"
 
 const CustomConfVerHeaderName = "X-Appgo-Conf-Version"

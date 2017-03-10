@@ -23,6 +23,7 @@ import (
 const (
 	UserIdFieldName      = "UserId__"
 	AdminUserIdFieldName = "AdminUserId__"
+	AuthorIdFieldName    = "AuthorId__"
 	ResIdFieldName       = "ResourceId__"
 	ContentFieldName     = "Content__"
 	RequestFieldName     = "Request__"
@@ -50,6 +51,7 @@ type HandlerType int
 type httpFunc struct {
 	requireAuth    bool
 	requireAdmin   bool
+	requireAuthor  bool
 	hasResId       bool
 	hasContent     bool
 	hasRequest     bool
@@ -146,6 +148,18 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		f.SetInt(int64(user))
+	}
+	if f.requireAuthor {
+		authorId, _ := h.authorIdFromHeader(r)
+		s := input.Elem()
+		f := s.FieldByName(AuthorIdFieldName)
+		if authorId == 0 {
+			h.renderError(w, appgo.NewApiErr(
+				appgo.ECodeUnauthorized,
+				"author role required, check if your header has correct author token"))
+			return
+		}
+		f.SetInt(int64(authorId))
 	}
 	if f.hasResId {
 		vars := mux.Vars(r)
@@ -263,6 +277,12 @@ func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
 	return user, role
 }
 
+func (h *handler) authorIdFromHeader(r *http.Request) appgo.Id {
+	token := auth.Token(r.Header.Get(appgo.CustomAuthorTokenHeaderName))
+	authorId, _ := token.Validate()
+	return authorId
+}
+
 func apiVersionFromHeader(r *http.Request) int {
 	v := r.Header.Get(appgo.CustomVersionHeaderName)
 	return strutil.ToInt(v)
@@ -369,6 +389,13 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 		requireAdmin = true
 		if fromIdType.Type.Kind() != reflect.Int64 {
 			return nil, errors.New("API func's 2nd parameter needs to be Int64")
+		}
+	}
+	requireAuthor := false
+	if fromIdField, ok := inputType.FieldByName(AuthorIdFieldName); ok {
+		requireAuthor = true
+		if fromIdField.Type.Kind() != reflect.Int64 {
+			return nil, errors.New("AuthorId needs to be of type Int64")
 		}
 	}
 	hasResId := false
