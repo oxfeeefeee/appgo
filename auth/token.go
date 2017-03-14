@@ -85,6 +85,8 @@ func tokenLifetime(role appgo.Role) int {
 		return appgo.Conf.TokenLifetime.WebUser
 	case appgo.RoleWebAdmin:
 		return appgo.Conf.TokenLifetime.WebAdmin
+	case appgo.RoleAuthor:
+		return appgo.Conf.TokenLifetime.Author
 	default:
 		return 0
 	}

@@ -25,6 +25,7 @@ const CustomPlatformHeaderName = "X-Appgo-Platform"
 const (
 	RoleAppUser  Role = 100
 	RoleWebUser       = 101
+	RoleAuthor        = 150
 	RoleWebAdmin      = 200
 )
 
