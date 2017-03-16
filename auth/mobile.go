@@ -10,7 +10,7 @@ import (
 const (
 	mobileCodeLen        = 6
 	mobileTokenLen       = 16
-	mobileCodeTimeout    = 2 * 60
+	mobileCodeTimeout    = 5 * 60
 	mobileTokenTimeout   = 10 * 60
 	mobileCodeKeyPrefix  = "mobilecode:"
 	mobileTokenKeyPrefix = "mobiletoken:"
