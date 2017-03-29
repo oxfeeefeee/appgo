@@ -76,6 +76,8 @@ func MobileVerifySet(mobile string, password string, id appgo.Id, code string) e
 	// set password if provided
 	if strings.TrimSpace(password) != "" {
 		return mobileSupport.UpdatePwByMobile(mobile, password)
+	} else {
+		return nil
 	}
 }
 
