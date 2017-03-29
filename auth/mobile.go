@@ -5,6 +5,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
+	"strings"
 )
 
 const (
@@ -65,11 +66,17 @@ func MobilePreSet(mobile string, id appgo.Id) (string, error) {
 	return sendSmsCode(mobile, id, appgo.SmsTemplateSetMobile)
 }
 
-func MobileVerifySet(mobile string, id appgo.Id, code string) error {
+func MobileVerifySet(mobile string, password string, id appgo.Id, code string) error {
 	if err := verifySmsCode(mobile, id, code); err != nil {
 		return err
 	}
-	return mobileSupport.SetMobileForUser(mobile, id)
+	if err := mobileSupport.SetMobileForUser(mobile, id); err != nil {
+		return err
+	}
+	// set password if provided
+	if strings.TrimSpace(password) != "" {
+		return mobileSupport.UpdatePwByMobile(mobile, password)
+	}
 }
 
 func MobileRegisterUser(info *MobileUserInfo, role appgo.Role) (*LoginResult, error) {
