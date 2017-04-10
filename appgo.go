@@ -68,9 +68,10 @@ type MobileMsgSender interface {
 }
 
 type PushInfo struct {
-	Platform Platform
-	Provider string
-	Token    string
+	Platform     Platform
+	Manufacturer string
+	Provider     string
+	Token        string
 }
 
 type PushData struct {
