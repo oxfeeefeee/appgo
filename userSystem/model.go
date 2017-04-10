@@ -22,6 +22,7 @@ type UserModel struct {
 	AppToken     sql.NullString `gorm:"size:127"`
 	Role         appgo.Role
 	Platform     appgo.Platform
+	Manufacturer sql.NullString `gorm:"size:127"`
 	PushProvider sql.NullString `gorm:"size:16"`
 	PushToken    sql.NullString `gorm:"size:127"`
 	Nickname     sql.NullString `gorm:"size:63"`

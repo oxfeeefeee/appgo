@@ -140,6 +140,7 @@ func (u *UserSystem) UpdatePushInfo(id appgo.Id, pushInfo *appgo.PushInfo) error
 	user := &UserModel{Id: id}
 	var updates UserModel
 	updates.Platform = pushInfo.Platform
+	updates.Manufacturer = sql.NullString{pushInfo.Manufacturer, true}
 	updates.PushProvider = sql.NullString{pushInfo.Provider, true}
 	updates.PushToken = sql.NullString{pushInfo.Token, true}
 	if err := u.db.Model(user).Updates(&updates).Error; err != nil {
