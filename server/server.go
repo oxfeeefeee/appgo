@@ -138,6 +138,10 @@ func GetUserFromToken(r *http.Request) appgo.Id {
 
 func corsOptions() cors.Options {
 	origins := strings.Split(appgo.Conf.Cors.AllowedOrigins, ",")
+	// trim spaces of origin strings
+	for idx, _ := range origins {
+		origins[idx] = strings.TrimSpace(origins[idx])
+	}
 	methods := strings.Split(appgo.Conf.Cors.AllowedMethods, ",")
 	headers := strings.Split(appgo.Conf.Cors.AllowedHeaders, ",")
 	return cors.Options{
