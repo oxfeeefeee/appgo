@@ -43,7 +43,7 @@ func Do(cmd string, args ...interface{}) (reply interface{}, err error) {
 	return conn.Do(cmd, args...)
 }
 
-func GetConn() redis.Conn {
+func GetConn() redigo.Conn {
 	return pool.Get()
 }
 
