@@ -8,7 +8,7 @@ import (
 )
 
 type Zsets struct {
-	namespace string
+	Namespace string
 }
 
 type ZsetIncrbyParams struct {
@@ -135,7 +135,7 @@ func (z *Zsets) RangeByScoreStr(
 }
 
 func (z *Zsets) keystr(k interface{}) string {
-	return fmt.Sprintf("%s:%v", z.namespace, k)
+	return fmt.Sprintf("%s:%v", z.Namespace, k)
 }
 
 func oneFromSlice(vals []interface{}, err error) (interface{}, error) {

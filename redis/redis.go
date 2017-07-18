@@ -43,6 +43,10 @@ func Do(cmd string, args ...interface{}) (reply interface{}, err error) {
 	return conn.Do(cmd, args...)
 }
 
+func GetConn() redis.Conn {
+	return pool.Get()
+}
+
 func BeginTrans() *Trans {
 	conn := pool.Get()
 	conn.Send("MULTI")
