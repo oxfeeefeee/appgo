@@ -34,6 +34,7 @@ type UserSystem interface {
 	// extraInfo should be ban info if banned is true, userInfo otherwise
 	CheckIn(id appgo.Id, role appgo.Role,
 		newToken Token) (banned bool, extraInfo interface{}, err error)
+	IsBanned(id appgo.Id) bool
 }
 
 type WeixinSupport interface {

@@ -54,6 +54,10 @@ func (t Token) Validate() (appgo.Id, appgo.Role) {
 		log.Infoln("validate token failed: expired at ", expiry)
 		return 0, 0
 	}
+	// check if user is baned
+	if userSystem.IsBanned(userId) {
+		return 0, 0
+	}
 	return userId, appgo.Role(roleInt)
 }
 

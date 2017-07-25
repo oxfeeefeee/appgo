@@ -109,6 +109,16 @@ func (u *UserSystem) GetUserModel(id appgo.Id) (*UserModel, error) {
 	return user, nil
 }
 
+func (u *UserSystem) IsBanned(id appgo.Id) bool {
+	user := &UserModel{Id: id}
+	if err := u.db.Select("banned_until").First(user).Error; err != nil {
+		return false
+	} else {
+		log.Errorln("user: ", user, ", user.BannedUtil: ", user.BannedUntil)
+		return user.BannedUntil != nil
+	}
+}
+
 func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 	newToken auth.Token) (banned bool, extraInfo interface{}, err error) {
 	user, err := u.GetUserModel(id)

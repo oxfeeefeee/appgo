@@ -132,7 +132,7 @@ func (s *Server) Serve() {
 
 func GetUserFromToken(r *http.Request) appgo.Id {
 	token := auth.Token(r.Header.Get(appgo.CustomTokenHeaderName))
-	user, _ := token.Validate()
+	user, _, _, _ := token.Parse()
 	return user
 }
 
