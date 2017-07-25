@@ -114,7 +114,6 @@ func (u *UserSystem) IsBanned(id appgo.Id) bool {
 	if err := u.db.Select("banned_until").First(user).Error; err != nil {
 		return false
 	} else {
-		log.Errorln("user: ", user, ", user.BannedUtil: ", user.BannedUntil)
 		return user.BannedUntil != nil
 	}
 }
