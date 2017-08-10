@@ -118,6 +118,11 @@ func (u *UserSystem) IsBanned(id appgo.Id) bool {
 	}
 }
 
+func (u *UserSystem) RecordLastActiveAt(uid appgo.Id) error {
+	user := &UserModel{Id: uid}
+	return u.db.Model(user).Update("last_active_at", gorm.Expr("now()")).Error
+}
+
 func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 	newToken auth.Token) (banned bool, extraInfo interface{}, err error) {
 	user, err := u.GetUserModel(id)

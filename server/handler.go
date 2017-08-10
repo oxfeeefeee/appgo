@@ -136,6 +136,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			field.SetInt(int64(user))
+			go auth.RecordLastActiveAt(appgo.Id(int64(user)))
 		}
 	} else if f.requireAdmin {
 		user, role := h.authByHeader(r)

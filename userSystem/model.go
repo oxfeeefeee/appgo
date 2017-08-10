@@ -30,6 +30,7 @@ type UserModel struct {
 	Sex          appgo.Sex
 	BannedUntil  *time.Time
 	CreatedAt    time.Time
+	LastActiveAt time.Time `gorm:"index"`
 	DeletedAt    *time.Time
 }
 

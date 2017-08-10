@@ -35,6 +35,7 @@ type UserSystem interface {
 	CheckIn(id appgo.Id, role appgo.Role,
 		newToken Token) (banned bool, extraInfo interface{}, err error)
 	IsBanned(id appgo.Id) bool
+	RecordLastActiveAt(uid appgo.Id) error
 }
 
 type WeixinSupport interface {
@@ -196,6 +197,10 @@ func LoginByOAuth(code string, index int, role appgo.Role) (*LoginResult, error)
 		}
 	}
 	return checkIn(uid, role)
+}
+
+func RecordLastActiveAt(uid appgo.Id) error {
+	return userSystem.RecordLastActiveAt(uid)
 }
 
 func checkIn(uid appgo.Id, role appgo.Role) (*LoginResult, error) {
