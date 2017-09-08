@@ -147,3 +147,16 @@ func oneFromSlice(vals []interface{}, err error) (interface{}, error) {
 	}
 	return vals[0], nil
 }
+
+func (z *Zsets) UnionStore(destKey string, keys []interface{}) error {
+	cmd := "zunionstore"
+
+	var args = make([]interface{}, 0)
+	args = append(args, z.keystr(destKey), len(keys))
+	args = append(args, keys...)
+
+	if _, err := Do(cmd, args...); err != nil {
+		return err
+	}
+	return nil
+}
