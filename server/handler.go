@@ -14,6 +14,8 @@ import (
 	"github.com/oxfeeefeee/appgo/toolkit/strutil"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/unrolled/render"
+	"gitlab.wallstcn.com/wscnbackend/ivankastd"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
@@ -97,6 +99,8 @@ func init() {
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer addMetrics(r, time.Now())
+	startTime := time.Now()
+	var userId int64 // for use with log
 
 	method := r.Method
 	ver := apiVersionFromHeader(r)
@@ -136,6 +140,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			field.SetInt(int64(user))
+			userId = int64(user)
 			go auth.RecordLastActiveAt(appgo.Id(int64(user)))
 		}
 	} else if f.requireAdmin {
@@ -149,6 +154,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		f.SetInt(int64(user))
+		userId = int64(user)
 	}
 	if f.requireAuthor {
 		authorId, expired := h.authorIdFromHeader(r)
@@ -229,8 +235,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			template := returns[1].Interface().(string)
 			h.renderHtml(w, template, returns[0].Interface())
 		} else if rl == 2 {
+			logUserActivity(r, startTime, userId, appgo.ECodeOK, -1)
 			h.renderData(w, returns[0].Interface())
 		} else { // Empty return
+			logUserActivity(r, startTime, userId, appgo.ECodeOK, -1)
 			h.renderData(w, map[string]string{})
 		}
 	} else {
@@ -241,6 +249,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, aerr.Msg, http.StatusFound)
 				return
 			}
+			logUserActivity(r, startTime, userId, appgo.ECodeInternal, -1)
 			h.renderError(w, aerr)
 		}
 	}
@@ -268,7 +277,6 @@ func addMetrics(r *http.Request, begin time.Time) {
 	}
 	metrics_query_count["all"].Add(1)
 	metrics_query_count[key].Add(1)
-
 }
 
 func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
@@ -457,4 +465,50 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 	return &httpFunc{requireAuth, requireAdmin, requireAuthor,
 		hasResId, hasContent, hasRequest, hasConfVer, hasAppVer, hasPlatform,
 		dummyInput, allowAnonymous, inputType, contentType, fieldVal}, nil
+}
+
+func logUserActivity(r *http.Request, startTime time.Time, userId int64, resCode int, bytesOut int) {
+	var remoteIp string
+	forwardedFor := r.Header.Get("X-Forwarded-For")
+	if strings.TrimSpace(forwardedFor) == "" {
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			remoteIp = ""
+		} else {
+			remoteIp = ip
+		}
+	}
+
+	deviceId := r.Header.Get("X-Device-Id")
+	deviceId = strings.TrimSpace(deviceId)
+	var deviceType string
+	if len(deviceId) > 30 {
+		if strings.HasPrefix(deviceId, "android") {
+			deviceType = "android"
+		} else {
+			deviceType = "ios"
+		}
+	} else {
+		deviceType = "web"
+	}
+
+	ivankastd.LogUserActivity(ivankastd.LogFields{
+		"type":          "webaccess",
+		"remote_ip":     remoteIp,
+		"host":          r.Host,
+		"uri":           r.RequestURI,
+		"method":        r.Method,
+		"path":          r.URL.Path,
+		"route":         "undefined",
+		"referer":       r.Referer(),
+		"user_agent":    r.UserAgent(),
+		"status":        200,
+		"latency":       (time.Now().UnixNano() - startTime.UnixNano()) / 1000000,
+		"bytes_in":      -1,
+		"device_id":     deviceId,
+		"device_type":   deviceType,
+		"bytes_out":     bytesOut,
+		"user_id":       userId,
+		"response_code": resCode,
+	}, "webaccess")
 }

@@ -3,6 +3,7 @@ package appgo
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
+	"gitlab.wallstcn.com/wscnbackend/ivankastd"
 	"os"
 	"path/filepath"
 )
@@ -104,6 +105,7 @@ var Conf struct {
 		Enable bool
 		Port   string
 	}
+	IvankaLog ivankastd.ConfigLog
 }
 
 func initConfig() {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	// "gopkg.in/gemnasium/logrus-graylog-hook.v1"
+	"gitlab.wallstcn.com/wscnbackend/ivankastd"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,7 +16,8 @@ import (
 var once sync.Once
 
 func initLog() {
-	logrus.SetLevel(Conf.LogLevel)
+	// logrus.SetLevel(Conf.LogLevel)
+	ivankastd.InitLog(Conf.IvankaLog)
 }
 
 func InitLogHooks(skip int) {
