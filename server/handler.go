@@ -235,10 +235,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			template := returns[1].Interface().(string)
 			h.renderHtml(w, template, returns[0].Interface())
 		} else if rl == 2 {
-			logUserActivity(r, startTime, userId, appgo.ECodeOK, -1)
+			logUserActivity(r, startTime, userId, int(appgo.ECodeOK), -1)
 			h.renderData(w, returns[0].Interface())
 		} else { // Empty return
-			logUserActivity(r, startTime, userId, appgo.ECodeOK, -1)
+			logUserActivity(r, startTime, userId, int(appgo.ECodeOK), -1)
 			h.renderData(w, map[string]string{})
 		}
 	} else {
