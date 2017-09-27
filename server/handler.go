@@ -474,7 +474,7 @@ func logUserActivity(r *http.Request, startTime time.Time, userId int64, resCode
 		remoteIp = r.Header.Get("X-Forwarded-For")
 		if strings.TrimSpace(remoteIp) == "" {
 			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
+			if err == nil {
 				remoteIp = ip
 			}
 		}
