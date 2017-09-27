@@ -469,13 +469,14 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 
 func logUserActivity(r *http.Request, startTime time.Time, userId int64, resCode int, bytesOut int) {
 	var remoteIp string
-	forwardedFor := r.Header.Get("X-Forwarded-For")
-	if strings.TrimSpace(forwardedFor) == "" {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			remoteIp = ""
-		} else {
-			remoteIp = ip
+	remoteIp = r.Header.Get("x-client-ip")
+	if strings.TrimSpace(remoteIp) == "" {
+		remoteIp = r.Header.Get("X-Forwarded-For")
+		if strings.TrimSpace(remoteIp) == "" {
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				remoteIp = ip
+			}
 		}
 	}
 
