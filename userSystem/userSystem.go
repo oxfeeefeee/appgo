@@ -103,7 +103,7 @@ func (u *UserSystem) GetUserModel(id appgo.Id) (*UserModel, error) {
 		log.WithFields(log.Fields{
 			"id":        id,
 			"gormError": err,
-		}).Infoln("failed to find user")
+		}).Infoln("Failed to find user")
 		return nil, appgo.NotFoundErr
 	}
 	return user, nil
