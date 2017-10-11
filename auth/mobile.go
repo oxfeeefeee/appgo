@@ -29,6 +29,7 @@ type MobileUserInfo struct {
 type MobileSupport interface {
 	HasMobileUser(mobile string) (bool, error)
 	GetMobileUser(mobile, password string) (uid appgo.Id, err error)
+	GetMobileUserWithOutPwd(mobile string) (uid appgo.Id, err error)
 	AddMobileUser(info *MobileUserInfo) (uid appgo.Id, err error)
 	UpdatePwByMobile(mobile, password string) error
 	SetMobileForUser(mobile string, userId appgo.Id) error
@@ -57,6 +58,37 @@ func MobileVerifyRegister(mobile, code string) (string, error) {
 	return token, nil
 }
 
+func SMSPreLogin(mobile string) (string, error) {
+	if mobileSupport == nil {
+		return "", errors.New("mobile not supported")
+	}
+	if has, err := mobileSupport.HasMobileUser(mobile); err != nil {
+		return "", err
+	} else if has {
+		return sendSmsCode(mobile, 0, appgo.SmsTemplateSMSLogin)
+	}
+
+	return "", appgo.MobileUserNotFoundErr
+}
+
+func SMSVerifyLogin(mobile, code string, role appgo.Role) (*LoginResult, error) {
+	if mobileSupport == nil {
+		return nil, errors.New("mobile not supported")
+	}
+	if err := verifySmsCode(mobile, 0, code); err != nil {
+		return nil, err
+	}
+
+	uid, err := mobileSupport.GetMobileUserWithOutPwd(mobile)
+	if err != nil {
+		return nil, err
+	}
+	if uid == 0 {
+		return nil, appgo.MobileUserNotFoundErr
+	}
+	return checkIn(uid, role)
+}
+
 func MobilePreSet(mobile string, id appgo.Id) (string, error) {
 	if has, err := mobileSupport.HasMobileUser(mobile); err != nil {
 		return "", err
@@ -64,6 +96,14 @@ func MobilePreSet(mobile string, id appgo.Id) (string, error) {
 		return "", appgo.MobileUserAlreadyExistsErr
 	}
 	return sendSmsCode(mobile, id, appgo.SmsTemplateSetMobile)
+}
+
+func MobilePreWxWebSet(mobile string, id appgo.Id) (string, error) {
+	return sendSmsCode(mobile, id, appgo.SmsTemplateSetMobile)
+}
+
+func MobileVerifyWxWebSet(mobile string, uid appgo.Id, code string) error {
+	return verifySmsCode(mobile, uid, code)
 }
 
 func MobileVerifySet(mobile string, password string, id appgo.Id, code string) error {

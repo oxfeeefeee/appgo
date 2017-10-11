@@ -18,6 +18,7 @@ var (
 	MobileUserBadCodeErr       *ApiError
 	MobileUserBadTokenErr      *ApiError
 	MobileUserAlreadyExistsErr *ApiError
+	WeixinUserAlreadyExistsErr *ApiError
 )
 
 const (
@@ -36,6 +37,7 @@ const (
 	ECodeMobileUserBadCode               = 60102
 	ECodeMobileUserBadToken              = 60103
 	ECodeMobileUserAlreadyExists         = 60104
+	ECodeWeixinUserAlreadyExists         = 60107
 )
 
 type ErrCode int
@@ -52,6 +54,7 @@ func init() {
 	MobileUserBadCodeErr = NewApiErr(ECodeMobileUserBadCode, "Mobile user bad code")
 	MobileUserBadTokenErr = NewApiErr(ECodeMobileUserBadToken, "Mobile user bad token")
 	MobileUserAlreadyExistsErr = NewApiErr(ECodeMobileUserAlreadyExists, "Mobile user already exists")
+	WeixinUserAlreadyExistsErr = NewApiErr(ECodeWeixinUserAlreadyExists, "Weixin user already exists")
 }
 
 type ApiError struct {

@@ -41,6 +41,9 @@ type UserSystem interface {
 type WeixinSupport interface {
 	GetWeixinUser(unionId string) (uid appgo.Id, err error)
 	AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err error)
+	SetWeixinForUser(userId appgo.Id, unionId string) error
+	EmptyWeixinForUser(userId appgo.Id) error
+	EmptyAndSetWxForUser(wxuid, uid appgo.Id, wxUnionId string) error
 }
 
 type WeiboSupport interface {
@@ -125,6 +128,40 @@ func LoginByWeixin(openId, token, code string, role appgo.Role) (*LoginResult, e
 	return checkIn(uid, role)
 }
 
+func LoginByWeixinWeb(wxappInfo *weixin.AppInfo, openId, token, code string, role appgo.Role) (*LoginResult, string, string, error) {
+	if weixinSupport == nil {
+		return nil, "", "", errors.New("weixin login not supported")
+	}
+	if openId == "" || token == "" {
+		params := &weixin.AccessTokenParams{*wxappInfo, code}
+		at := weixin.GetAccessToken(params)
+		if at == nil {
+			return nil, "", "", errors.New("Failed to get access token")
+		}
+		openId, token = at.OpenId, at.AccessToken
+	}
+	winfo := weixin.GetUserInfo(openId, token)
+	if winfo == nil {
+		return nil, "", "", errors.New("Failed to get weixin user info")
+	}
+	if len(winfo.UnionId) == 0 {
+		return nil, "", "", errors.New("Weixin union id is null")
+	}
+	uid, err := weixinSupport.GetWeixinUser(winfo.UnionId)
+	if err != nil {
+		return nil, "", "", err
+	}
+	if uid == 0 {
+		uid, err = weixinSupport.AddWeixinUser(winfo)
+		if err != nil {
+			return nil, "", "", err
+		}
+	}
+
+	loginRes, err := checkIn(uid, role)
+	return loginRes, openId, winfo.Nickname, err
+}
+
 func LoginByWeibo(openId, token, code string, role appgo.Role) (*LoginResult, error) {
 	if weiboSupport == nil {
 		return nil, errors.New("weibo login not supported")
@@ -196,6 +233,10 @@ func LoginByOAuth(code string, index int, role appgo.Role) (*LoginResult, error)
 			return nil, err
 		}
 	}
+	return checkIn(uid, role)
+}
+
+func LoginById(uid appgo.Id, role appgo.Role) (*LoginResult, error) {
 	return checkIn(uid, role)
 }
 

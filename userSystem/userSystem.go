@@ -191,6 +191,64 @@ func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (appgo.Id, error) {
 	return u.saveUser(user)
 }
 
+func (u *UserSystem) SetWeixinForUser(userId appgo.Id, unionId string) error {
+	user := &UserModel{Id: userId}
+	var updates UserModel
+	updates.WeixinUnionId = sql.NullString{unionId, true}
+	if err := u.db.Model(user).Updates(&updates).Error; err != nil {
+		log.WithFields(log.Fields{
+			"id":        userId,
+			"gormError": err,
+		}).Errorln("failed to update weixin")
+		return appgo.InternalErr
+	}
+	return nil
+}
+
+func (u *UserSystem) EmptyWeixinForUser(userId appgo.Id) error {
+	if err := u.db.Exec("UPDATE user_users SET weixin_union_id = NULL WHERE id = ?", userId).Error; err != nil {
+		log.WithFields(log.Fields{
+			"id":        userId,
+			"gormError": err,
+		}).Errorln("failed to empty weixin")
+		return appgo.InternalErr
+	}
+	return nil
+}
+
+func (u *UserSystem) EmptyAndSetWxForUser(wxuid, uid appgo.Id, wxUnionId string) error {
+	tx := u.db.Begin()
+	// empty weixin unionid of weixin user
+	if err := tx.Exec("UPDATE user_users SET weixin_union_id = NULL WHERE id = ?", wxuid).Error; err != nil {
+		tx.Rollback()
+		log.WithFields(log.Fields{
+			"id":        wxuid,
+			"gormError": err,
+		}).Errorln("failed to empty weixin")
+		return err
+	}
+
+	// set weixin unionid for uid user
+	user := &UserModel{Id: uid}
+	var updates UserModel
+	updates.WeixinUnionId = sql.NullString{wxUnionId, true}
+	if err := tx.Model(user).Updates(&updates).Error; err != nil {
+		tx.Rollback()
+		log.WithFields(log.Fields{
+			"id":        uid,
+			"gormError": err,
+		}).Errorln("failed to update weixin")
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
+}
+
 func (u *UserSystem) GetWeiboUser(openId string) (appgo.Id, error) {
 	return getUser(u.db, &UserModel{
 		WeiboId: database.SqlStr(openId)})
@@ -308,6 +366,19 @@ func (u *UserSystem) GetMobileUser(mobile, password string) (appgo.Id, error) {
 	if !bytes.Equal(hash[:], user.PasswordHash) {
 		return 0, appgo.InvalidPasswordErr
 	}
+	return user.Id, nil
+}
+
+func (u *UserSystem) GetMobileUserWithOutPwd(mobile string) (appgo.Id, error) {
+	where := &UserModel{Mobile: database.SqlStr(mobile)}
+	var user UserModel
+	if db := u.db.Where(where).First(&user); db.Error != nil {
+		if db.RecordNotFound() {
+			return 0, nil
+		}
+		return 0, db.Error
+	}
+
 	return user.Id, nil
 }
 

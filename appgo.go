@@ -44,6 +44,7 @@ const (
 	SmsTemplateRegister
 	SmsTemplatePwReset
 	SmsTemplateSetMobile
+	SmsTemplateSMSLogin
 )
 
 type SmsTemplate int
