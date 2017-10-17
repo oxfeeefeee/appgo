@@ -285,7 +285,8 @@ func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
 	if user == 0 {
 		return 0, 0
 	}
-	if !h.ts.Validate(token) {
+	platform := platformFromHeader(r)
+	if !h.ts.Validate(user, role, token, platform) {
 		return 0, 0
 	}
 	return user, role

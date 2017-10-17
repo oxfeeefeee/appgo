@@ -24,6 +24,7 @@ var (
 
 type LoginResult struct {
 	UserId   appgo.Id
+	IsNew    bool
 	Token    Token
 	UserInfo interface{}
 	Banned   bool

@@ -15,6 +15,8 @@ import (
 	"github.com/oxfeeefeee/appgo/services/weixin"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
 	"github.com/parnurzeal/gorequest"
+	"strings"
+	"time"
 )
 
 var U *UserSystem
@@ -93,7 +95,29 @@ func Init(db *gorm.DB, settings UserSystemSettings) *UserSystem {
 	return U
 }
 
-func (u *UserSystem) Validate(token auth.Token) bool {
+func (u *UserSystem) Validate(uid appgo.Id, role appgo.Role, token auth.Token, platform string) bool {
+	// request with no platform is from pc
+	if len(strings.TrimSpace(platform)) == 0 {
+		return true
+	}
+	if role == appgo.RoleAppUser {
+		// get user's token from cache
+		cacheToken, err := auth.GetCacheToken(uid)
+		if err != nil {
+			log.Errorf("get user %d token from cache failed, error: %v", uid, err)
+		} else {
+			return string(token) == cacheToken
+		}
+
+		// get user's token from db
+		user, err := u.GetUserModel(uid)
+		if err != nil {
+			return false
+		} else {
+			return user.AppToken.String == string(token)
+		}
+	}
+
 	return true //todo
 }
 
@@ -103,7 +127,7 @@ func (u *UserSystem) GetUserModel(id appgo.Id) (*UserModel, error) {
 		log.WithFields(log.Fields{
 			"id":        id,
 			"gormError": err,
-		}).Infoln("Failed to find user")
+		}).Infoln("failed to find user")
 		return nil, appgo.NotFoundErr
 	}
 	return user, nil
@@ -133,13 +157,21 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 		return false, nil, appgo.ForbiddenErr
 	}
 	// TODO save other tokens
-	if newToken != "" && role == appgo.RoleAppUser {
+	if newToken != "" && (role == appgo.RoleAppUser || role == appgo.RoleWebUser) {
 		tk := sql.NullString{string(newToken), true}
 		if err := u.db.Model(user).Updates(&UserModel{AppToken: tk}).Error; err != nil {
 			log.WithFields(log.Fields{
 				"id":        id,
 				"gormError": err,
 			}).Errorln("failed to save token")
+			return false, nil, appgo.InternalErr
+		}
+
+		if err := auth.SetCacheToken(id, tk.String); err != nil {
+			log.WithFields(log.Fields{
+				"id":        id,
+				"gormError": err,
+			}).Errorln("failed to set cache token")
 			return false, nil, appgo.InternalErr
 		}
 	}
@@ -360,7 +392,7 @@ func (u *UserSystem) GetMobileUser(mobile, password string) (appgo.Id, error) {
 		return 0, db.Error
 	}
 	if len(user.PasswordSalt) == 0 || len(user.PasswordHash) == 0 {
-		return 0, errors.New("password not set yet")
+		return 0, appgo.PasswordNotSetErr
 	}
 	hash := crypto.SaltedHash(user.PasswordSalt, password)
 	if !bytes.Equal(hash[:], user.PasswordHash) {
@@ -395,6 +427,7 @@ func (u *UserSystem) AddMobileUser(info *auth.MobileUserInfo) (appgo.Id, error) 
 			Nickname:     database.SqlStr(info.Nickname),
 			Portrait:     database.SqlStr(info.Portrait),
 			Sex:          info.Sex,
+			LastActiveAt: time.Now(),
 		}
 		return u.saveUser(user)
 	}

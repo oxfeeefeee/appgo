@@ -6,6 +6,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/oxfeeefeee/appgo"
+	"github.com/oxfeeefeee/appgo/redis"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
 	"strconv"
 	"strings"
@@ -13,6 +14,21 @@ import (
 )
 
 type Token string
+
+var tokenCache *redis.Hashs
+
+func init() {
+	tokenCache = redis.NewHashs("userToken")
+}
+
+func GetCacheToken(uid appgo.Id) (string, error) {
+	return tokenCache.GetValue(uid.String())
+}
+
+func SetCacheToken(uid appgo.Id, newToken string) error {
+	_, err := tokenCache.SetValue(uid.String(), newToken)
+	return err
+}
 
 func NewToken(userId appgo.Id, role appgo.Role) Token {
 	lifetime := tokenLifetime(role)

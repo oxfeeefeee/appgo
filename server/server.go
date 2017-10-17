@@ -25,7 +25,7 @@ type Server struct {
 }
 
 type TokenStore interface {
-	Validate(token auth.Token) bool
+	Validate(uid appgo.Id, role appgo.Role, token auth.Token, platform string) bool
 }
 
 type MetricsSchema interface {

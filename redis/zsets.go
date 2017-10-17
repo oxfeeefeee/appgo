@@ -64,6 +64,10 @@ func (z *Zsets) Incrby(key interface{}, score float64, item interface{}) error {
 	return nil
 }
 
+func (z *Zsets) Score(key interface{}, item interface{}) (float64, error) {
+	return redigo.Float64(Do("ZSCORE", z.keystr(key), item))
+}
+
 func (z *Zsets) BatchIncrby(params []ZsetIncrbyParams) error {
 	trans := BeginTrans()
 	for _, p := range params {
