@@ -62,13 +62,8 @@ func SMSPreLogin(mobile string) (string, error) {
 	if mobileSupport == nil {
 		return "", errors.New("mobile not supported")
 	}
-	if has, err := mobileSupport.HasMobileUser(mobile); err != nil {
-		return "", err
-	} else if has {
-		return sendSmsCode(mobile, 0, appgo.SmsTemplateSMSLogin)
-	}
 
-	return "", appgo.MobileUserNotFoundErr
+	return sendSmsCode(mobile, 0, appgo.SmsTemplateSMSLogin)
 }
 
 func SMSVerifyLogin(mobile, code string, role appgo.Role) (*LoginResult, error) {
@@ -79,14 +74,25 @@ func SMSVerifyLogin(mobile, code string, role appgo.Role) (*LoginResult, error) 
 		return nil, err
 	}
 
+	isNew := false
 	uid, err := mobileSupport.GetMobileUserWithOutPwd(mobile)
 	if err != nil {
 		return nil, err
 	}
 	if uid == 0 {
-		return nil, appgo.MobileUserNotFoundErr
+		// create new user
+		if uid, err = mobileSupport.AddMobileUser(&MobileUserInfo{Mobile: mobile, Nickname: mobile}); err != nil {
+			return nil, err
+		}
+		isNew = true
 	}
-	return checkIn(uid, role)
+	loginRes, err := checkIn(uid, role)
+	if err != nil {
+		return nil, err
+	}
+	loginRes.IsNew = isNew
+
+	return loginRes, nil
 }
 
 func MobilePreSet(mobile string, id appgo.Id) (string, error) {

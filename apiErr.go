@@ -14,6 +14,7 @@ var (
 	InvalidUsernameErr         *ApiError
 	InvalidNicknameErr         *ApiError
 	InvalidPasswordErr         *ApiError
+	PasswordNotSetErr          *ApiError
 	MobileUserNotFoundErr      *ApiError
 	MobileUserBadCodeErr       *ApiError
 	MobileUserBadTokenErr      *ApiError
@@ -33,6 +34,7 @@ const (
 	ECodeInvalidUsername                 = 60001
 	ECodeInvalidNickname                 = 60002
 	ECodeInvalidPassword                 = 60003
+	ECodePasswordNotSet                  = 60004
 	ECodeMobileUserNotFound              = 60101
 	ECodeMobileUserBadCode               = 60102
 	ECodeMobileUserBadToken              = 60103
@@ -50,6 +52,7 @@ func init() {
 	InvalidUsernameErr = NewApiErr(ECodeInvalidUsername, "Invalid username")
 	InvalidNicknameErr = NewApiErr(ECodeInvalidNickname, "Invalid nickname")
 	InvalidPasswordErr = NewApiErr(ECodeInvalidPassword, "Invalid password")
+	PasswordNotSetErr = NewApiErr(ECodePasswordNotSet, "Password not set yet")
 	MobileUserNotFoundErr = NewApiErr(ECodeMobileUserNotFound, "Mobile user not found")
 	MobileUserBadCodeErr = NewApiErr(ECodeMobileUserBadCode, "Mobile user bad code")
 	MobileUserBadTokenErr = NewApiErr(ECodeMobileUserBadToken, "Mobile user bad token")
