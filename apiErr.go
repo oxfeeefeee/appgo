@@ -7,39 +7,43 @@ import (
 )
 
 var (
-	NotFoundErr                *ApiError
-	UnauthorizedErr            *ApiError
-	ForbiddenErr               *ApiError
-	InternalErr                *ApiError
-	InvalidUsernameErr         *ApiError
-	InvalidNicknameErr         *ApiError
-	InvalidPasswordErr         *ApiError
-	PasswordNotSetErr          *ApiError
-	MobileUserNotFoundErr      *ApiError
-	MobileUserBadCodeErr       *ApiError
-	MobileUserBadTokenErr      *ApiError
-	MobileUserAlreadyExistsErr *ApiError
-	WeixinUserAlreadyExistsErr *ApiError
+	NotFoundErr                    *ApiError
+	UnauthorizedErr                *ApiError
+	ForbiddenErr                   *ApiError
+	InternalErr                    *ApiError
+	InvalidUsernameErr             *ApiError
+	InvalidNicknameErr             *ApiError
+	InvalidPasswordErr             *ApiError
+	PasswordNotSetErr              *ApiError
+	MobileUserNotFoundErr          *ApiError
+	MobileUserBadCodeErr           *ApiError
+	MobileUserBadTokenErr          *ApiError
+	MobileUserAlreadyExistsErr     *ApiError
+	WeixinUserAlreadyExistsErr     *ApiError
+	UserWithoutMobileErr           *ApiError
+	WeixinUserWithAnotherMobileErr *ApiError
 )
 
 const (
-	ECodeOK                      ErrCode = 20000
-	ECodeRedirect                        = 30200
-	ECodeBadRequest                      = 40000
-	ECodeUnauthorized                    = 40100
-	ECodeForbidden                       = 40300
-	ECodeNotFound                        = 40400
-	ECodeInternal                        = 50000
-	ECode3rdPartyAuthFailed              = 50300
-	ECodeInvalidUsername                 = 60001
-	ECodeInvalidNickname                 = 60002
-	ECodeInvalidPassword                 = 60003
-	ECodePasswordNotSet                  = 60004
-	ECodeMobileUserNotFound              = 60101
-	ECodeMobileUserBadCode               = 60102
-	ECodeMobileUserBadToken              = 60103
-	ECodeMobileUserAlreadyExists         = 60104
-	ECodeWeixinUserAlreadyExists         = 60107
+	ECodeOK                          ErrCode = 20000
+	ECodeRedirect                            = 30200
+	ECodeBadRequest                          = 40000
+	ECodeUnauthorized                        = 40100
+	ECodeForbidden                           = 40300
+	ECodeNotFound                            = 40400
+	ECodeInternal                            = 50000
+	ECode3rdPartyAuthFailed                  = 50300
+	ECodeInvalidUsername                     = 60001
+	ECodeInvalidNickname                     = 60002
+	ECodeInvalidPassword                     = 60003
+	ECodePasswordNotSet                      = 60004
+	ECodeMobileUserNotFound                  = 60101
+	ECodeMobileUserBadCode                   = 60102
+	ECodeMobileUserBadToken                  = 60103
+	ECodeMobileUserAlreadyExists             = 60104
+	ECodeWeixinUserAlreadyExists             = 60107
+	ECodeWeixinUserWithAnotherMobile         = 60108
+	ECodeUserWithoutMobile                   = 60109
 )
 
 type ErrCode int
@@ -58,6 +62,8 @@ func init() {
 	MobileUserBadTokenErr = NewApiErr(ECodeMobileUserBadToken, "Mobile user bad token")
 	MobileUserAlreadyExistsErr = NewApiErr(ECodeMobileUserAlreadyExists, "Mobile user already exists")
 	WeixinUserAlreadyExistsErr = NewApiErr(ECodeWeixinUserAlreadyExists, "Weixin user already exists")
+	UserWithoutMobileErr = NewApiErr(ECodeUserWithoutMobile, "User without mobile")
+	WeixinUserWithAnotherMobileErr = NewApiErr(ECodeWeixinUserWithAnotherMobile, "Weixin user with another mobile")
 }
 
 type ApiError struct {

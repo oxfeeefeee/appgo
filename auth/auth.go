@@ -37,6 +37,7 @@ type UserSystem interface {
 		newToken Token) (banned bool, extraInfo interface{}, err error)
 	IsBanned(id appgo.Id) bool
 	RecordLastActiveAt(uid appgo.Id) error
+	GetUserMobile(uid appgo.Id) (mobile string, err error)
 }
 
 type WeixinSupport interface {

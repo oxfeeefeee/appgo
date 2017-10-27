@@ -41,6 +41,14 @@ func SetWeixin(uid appgo.Id, openId, token, code string, reset bool) error {
 		return nil
 	}
 
+	if wxMobile, err := userSystem.GetUserMobile(wxuid); err != nil {
+		return err
+	} else {
+		if len(wxMobile) != 0 {
+			return appgo.WeixinUserWithAnotherMobileErr
+		}
+	}
+
 	return appgo.WeixinUserAlreadyExistsErr
 }
 

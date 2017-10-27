@@ -127,7 +127,7 @@ func (u *UserSystem) GetUserModel(id appgo.Id) (*UserModel, error) {
 		log.WithFields(log.Fields{
 			"id":        id,
 			"gormError": err,
-		}).Infoln("failed to find user")
+		}).Infoln("Failed to find user")
 		return nil, appgo.NotFoundErr
 	}
 	return user, nil
@@ -145,6 +145,15 @@ func (u *UserSystem) IsBanned(id appgo.Id) bool {
 func (u *UserSystem) RecordLastActiveAt(uid appgo.Id) error {
 	user := &UserModel{Id: uid}
 	return u.db.Model(user).Update("last_active_at", gorm.Expr("now()")).Error
+}
+
+func (u *UserSystem) GetUserMobile(uid appgo.Id) (mobile string, err error) {
+	user := &UserModel{Id: uid}
+	if err := u.db.Select("mobile").First(user).Error; err != nil {
+		return "", err
+	} else {
+		return user.Mobile.String, nil
+	}
 }
 
 func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
