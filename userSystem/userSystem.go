@@ -96,6 +96,7 @@ func Init(db *gorm.DB, settings UserSystemSettings) *UserSystem {
 }
 
 func (u *UserSystem) Validate(uid appgo.Id, role appgo.Role, token auth.Token, platform string) bool {
+	return true
 	// request with no platform is from pc
 	if len(strings.TrimSpace(platform)) == 0 {
 		return true
@@ -103,10 +104,13 @@ func (u *UserSystem) Validate(uid appgo.Id, role appgo.Role, token auth.Token, p
 	if role == appgo.RoleAppUser {
 		// get user's token from cache
 		cacheToken, err := auth.GetCacheToken(uid)
+		cacheToken = strings.TrimSpace(cacheToken)
 		if err != nil {
 			log.Errorf("get user %d token from cache failed, error: %v", uid, err)
 		} else {
-			return string(token) == cacheToken
+			if cacheToken != "" {
+				return string(token) == cacheToken
+			}
 		}
 
 		// get user's token from db

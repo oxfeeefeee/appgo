@@ -22,8 +22,14 @@ func (h *Hashs) SetValue(field interface{}, value interface{}) (int64, error) {
 
 func (h *Hashs) GetValue(field interface{}) (string, error) {
 	if result, err := Do("HGET", h.namespace, field); err != nil {
+		if err == ErrNotFound {
+			return "", nil
+		}
 		return "", err
 	} else {
+		if result == nil {
+			return "", nil
+		}
 		return redigo.String(result, nil)
 	}
 }
