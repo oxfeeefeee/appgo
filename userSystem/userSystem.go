@@ -185,7 +185,6 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 				"id":        id,
 				"gormError": err,
 			}).Errorln("failed to set cache token")
-			return false, nil, appgo.InternalErr
 		}
 	}
 	// todo stuff about ban
