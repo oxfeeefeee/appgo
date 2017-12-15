@@ -12,6 +12,8 @@ const InternalTestToken = "sjadfjlksadfjkljfwoeifshgsdhgsldfjf"
 
 const CustomTokenHeaderName = "X-Appgo-Token"
 
+const CustomWallStTokenHeaderName = "X-Ivanka-Token"
+
 const CustomAuthorTokenHeaderName = "X-Appgo-Author-Token"
 
 const CustomVersionHeaderName = "X-Appgo-Api-Version"

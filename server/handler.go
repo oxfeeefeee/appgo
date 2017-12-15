@@ -23,17 +23,17 @@ import (
 )
 
 const (
-	UserIdFieldName      = "UserId__"
-	AdminUserIdFieldName = "AdminUserId__"
-	AuthorIdFieldName    = "AuthorId__"
-	ResIdFieldName       = "ResourceId__"
-	ContentFieldName     = "Content__"
-	RequestFieldName     = "Request__"
-	ConfVerFieldName     = "ConfVer__"
-	AppVerFieldName      = "AppVer__"
-	PlatformFieldName    = "Platform__"
-
-	maxVersion = 99
+	UserIdFieldName         = "UserId__"
+	AdminUserIdFieldName    = "AdminUserId__"
+	AuthorIdFieldName       = "AuthorId__"
+	ResIdFieldName          = "ResourceId__"
+	ContentFieldName        = "Content__"
+	RequestFieldName        = "Request__"
+	ConfVerFieldName        = "ConfVer__"
+	AppVerFieldName         = "AppVer__"
+	PlatformFieldName       = "Platform__"
+	AdminUserAuthsFieldName = "AdminUserAuths__"
+	maxVersion              = 99
 )
 
 const (
@@ -67,14 +67,18 @@ type httpFunc struct {
 	funcValue      reflect.Value
 }
 
+type AdminAuthHandler func(r *http.Request, roleGruop string) (appgo.Id, appgo.Role, []string, error)
+
 type handler struct {
-	htype    HandlerType
-	path     string
-	template string
-	funcs    map[string]*httpFunc
-	supports []string
-	ts       TokenStore
-	renderer *render.Render
+	htype            HandlerType
+	path             string
+	template         string
+	funcs            map[string]*httpFunc
+	methodAuth       map[string]string
+	supports         []string
+	ts               TokenStore
+	renderer         *render.Render
+	adminAuthHandler AdminAuthHandler
 }
 
 func init() {
@@ -144,8 +148,40 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			go auth.RecordLastActiveAt(appgo.Id(int64(user)))
 		}
 	} else if f.requireAdmin {
-		user, role := h.authByHeader(r)
+		token := r.Header.Get(appgo.CustomWallStTokenHeaderName)
+		var (
+			user  appgo.Id
+			role  appgo.Role
+			auths []string
+			err   error
+		)
+		if token != "" && h.adminAuthHandler != nil {
+			roleGroup := h.methodAuth[strings.ToLower(method)]
+			user, role, auths, err = h.adminAuthHandler(r, roleGroup)
+			if err != nil {
+				h.renderError(w, appgo.ApiErrFromGoErr(err))
+				return
+			} else {
+				if len(auths) <= 0 {
+					h.renderError(w, appgo.NewApiErr(appgo.ECodeUnauthorized, "not authorized"))
+					return
+				}
+			}
+		} else {
+			user, role = h.authByHeader(r)
+			auths = []string{"xgb_admin"}
+		}
 		s := input.Elem()
+
+		m := make(map[string]bool)
+		userAuthsValue := reflect.ValueOf(m)
+		for _, auth := range auths {
+			userAuthsValue.SetMapIndex(reflect.ValueOf(auth), reflect.ValueOf(true))
+		}
+		fieldName := s.FieldByName(AdminUserAuthsFieldName)
+		if fieldName.IsValid() {
+			fieldName.Set(userAuthsValue)
+		}
 		f := s.FieldByName(AdminUserIdFieldName)
 		if user == 0 || role != appgo.RoleWebAdmin {
 			h.renderError(w, appgo.NewApiErr(
@@ -320,7 +356,7 @@ func platformFromHeader(r *http.Request) string {
 }
 
 func newHandler(funcSet interface{}, htype HandlerType,
-	ts TokenStore, renderer *render.Render) *handler {
+	ts TokenStore, renderer *render.Render, h AdminAuthHandler) *handler {
 	funcs := make(map[string]*httpFunc)
 	// Let if panic if funSet's type is not right
 	path := ""
@@ -339,10 +375,20 @@ func newHandler(funcSet interface{}, htype HandlerType,
 			template = t
 		}
 	}
+	methods := []string{"GET", "POST", "PUT", "DELETE"}
+
+	methodsAuth := make(map[string]string)
+	if field, ok := t.FieldByName("AUTH"); ok {
+		for _, m := range methods {
+			if auth := field.Tag.Get(strings.ToLower(m)); auth != "" {
+				methodsAuth[m] = auth
+			}
+		}
+	}
+
 	structVal := reflect.Indirect(reflect.ValueOf(funcSet))
 	supports := make([]string, 0, 4)
 	if htype == HandlerTypeJson {
-		methods := []string{"GET", "POST", "PUT", "DELETE"}
 		for _, m := range methods {
 			for i := 1; i <= maxVersion; i++ { //versions
 				if i > 1 {
@@ -370,7 +416,7 @@ func newHandler(funcSet interface{}, htype HandlerType,
 	} else {
 		log.Panicln("Bad handler type")
 	}
-	return &handler{htype, path, template, funcs, supports, ts, renderer}
+	return &handler{htype, path, template, funcs, methodsAuth, supports, ts, renderer, h}
 }
 
 func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
@@ -409,6 +455,15 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 			return nil, errors.New("API func's 2nd parameter needs to be Int64")
 		}
 	}
+
+	if requireAdmin {
+		if fromIdType, ok := inputType.FieldByName(AdminUserAuthsFieldName); ok {
+			if fromIdType.Type.Kind() != reflect.Map {
+				return nil, errors.New("API func's AdminUserAuths__ parameter needs to be map[string]bool")
+			}
+		}
+	}
+
 	requireAuthor := false
 	if fromIdField, ok := inputType.FieldByName(AuthorIdFieldName); ok {
 		requireAuthor = true
