@@ -46,14 +46,14 @@ func NewServer(ts TokenStore, middlewares []negroni.Handler,
 	}
 }
 
-func (s *Server) AddRest(path string, rests []interface{}) {
+func (s *Server) AddRest(path string, rests []interface{}, tokenParser AdminAuthHandler) {
 	renderer := render.New(render.Options{
 		Directory:     "N/A",
 		IndentJSON:    appgo.Conf.DevMode,
 		IsDevelopment: appgo.Conf.DevMode,
 	})
 	for _, api := range rests {
-		h := newHandler(api, HandlerTypeJson, s.ts, renderer)
+		h := newHandler(api, HandlerTypeJson, s.ts, renderer, tokenParser)
 		s.Handle(path+h.path, h).Methods(h.supports...)
 	}
 }
@@ -75,7 +75,7 @@ func (s *Server) AddHtml(path, layout string, htmls []interface{}, funcs templat
 		IsDevelopment: appgo.Conf.DevMode,
 	})
 	for _, api := range htmls {
-		h := newHandler(api, HandlerTypeHtml, s.ts, renderer)
+		h := newHandler(api, HandlerTypeHtml, s.ts, renderer, nil)
 		s.Handle(path+h.path, h).Methods("GET")
 	}
 }
