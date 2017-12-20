@@ -156,7 +156,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			err   error
 		)
 		if token != "" && h.adminAuthHandler != nil {
-			roleGroup := h.methodAuth[strings.ToLower(method)]
+			roleGroup := h.methodAuth[method]
 			user, role, auths, err = h.adminAuthHandler(r, roleGroup)
 			if err != nil {
 				h.renderError(w, appgo.ApiErrFromGoErr(err))
