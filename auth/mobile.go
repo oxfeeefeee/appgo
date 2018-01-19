@@ -47,9 +47,6 @@ func MobilePreRegister(mobile string) (string, error) {
 }
 
 func MobileVerifyRegister(mobile, code string) (string, error) {
-	if err := verifySmsCode(mobile, 0, code); err != nil {
-		return "", err
-	}
 	token := crypto.RandNumStr(mobileTokenLen)
 	if err := mobileSupport.Set(
 		mobileTokenKeyPrefix+mobile, token, mobileTokenTimeout); err != nil {
@@ -69,9 +66,6 @@ func SMSPreLogin(mobile string) (string, error) {
 func SMSVerifyLogin(mobile, code string, role appgo.Role) (*LoginResult, error) {
 	if mobileSupport == nil {
 		return nil, errors.New("mobile not supported")
-	}
-	if err := verifySmsCode(mobile, 0, code); err != nil {
-		return nil, err
 	}
 
 	isNew := false
@@ -108,14 +102,7 @@ func MobilePreWxWebSet(mobile string, id appgo.Id) (string, error) {
 	return sendSmsCode(mobile, id, appgo.SmsTemplateSetMobile)
 }
 
-func MobileVerifyWxWebSet(mobile string, uid appgo.Id, code string) error {
-	return verifySmsCode(mobile, uid, code)
-}
-
 func MobileVerifySet(mobile string, password string, id appgo.Id, code string) error {
-	if err := verifySmsCode(mobile, id, code); err != nil {
-		return err
-	}
 	if err := mobileSupport.SetMobileForUser(mobile, id); err != nil {
 		return err
 	}
@@ -152,9 +139,6 @@ func MobilePwReset(mobile string) (string, error) {
 }
 
 func MobileVerifyPwReset(mobile, code, password string) error {
-	if err := verifySmsCode(mobile, 0, code); err != nil {
-		return err
-	}
 	if err := mobileSupport.UpdatePwByMobile(mobile, password); err != nil {
 		return err
 	}
