@@ -8,12 +8,21 @@ import (
 )
 
 var (
-	pool *redigo.Pool
-)
-
-var (
 	ErrNotFound = appgo.NewApiErr(appgo.ECodeNotFound, "redis: value not found")
 )
+
+type Client struct {
+	Pool *redigo.Pool
+}
+
+func NewClient(conf appgo.RedisConf) *Client {
+	url := fmt.Sprintf("redis://%s:%s", conf.Host, conf.Port)
+	if conf.Password != "" {
+		url = fmt.Sprintf("redis://:%s@%s:%s", conf.Password, conf.Host, conf.Port)
+	}
+	pool := newPool(url, conf.MaxIdle, conf.IdleTimeout)
+	return &Client{Pool: pool}
+}
 
 type Trans struct {
 	conn redigo.Conn
@@ -28,27 +37,18 @@ func (t *Trans) Exec() (reply interface{}, err error) {
 	return t.conn.Do("EXEC")
 }
 
-func init() {
-	c := &appgo.Conf.Redis[0]
-	url := fmt.Sprintf("redis://%s:%s", c.Host, c.Port)
-	if c.Password != "" {
-		url = fmt.Sprintf("redis://:%s@%s:%s", c.Password, c.Host, c.Port)
-	}
-	pool = newPool(url, c.MaxIdle, c.IdleTimeout)
-}
-
-func Do(cmd string, args ...interface{}) (reply interface{}, err error) {
-	conn := pool.Get()
+func (self *Client) Do(cmd string, args ...interface{}) (reply interface{}, err error) {
+	conn := self.Pool.Get()
 	defer conn.Close()
 	return conn.Do(cmd, args...)
 }
 
-func GetConn() redigo.Conn {
-	return pool.Get()
+func (self *Client) GetConn() redigo.Conn {
+	return self.Pool.Get()
 }
 
-func BeginTrans() *Trans {
-	conn := pool.Get()
+func (self *Client) BeginTrans() *Trans {
+	conn := self.Pool.Get()
 	conn.Send("MULTI")
 	return &Trans{conn}
 }

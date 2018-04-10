@@ -8,8 +8,8 @@ type Strings struct {
 	col collection
 }
 
-func NewStrings(namespace string, expire int) *Strings {
-	return &Strings{*newCollection(namespace, expire)}
+func NewStrings(namespace string, expire int, client *Client) *Strings {
+	return &Strings{*newCollection(namespace, expire, client)}
 }
 
 func (s *Strings) Has(key interface{}) (bool, error) {

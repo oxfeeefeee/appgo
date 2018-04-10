@@ -20,8 +20,8 @@ type Objects struct {
 	serializer Serializer
 }
 
-func NewObjects(namespace string, expire int, ds DataStore, sl Serializer) *Objects {
-	return &Objects{*newCollection(namespace, expire), ds, sl}
+func NewObjects(namespace string, expire int, client *Client, ds DataStore, sl Serializer) *Objects {
+	return &Objects{*newCollection(namespace, expire, client), ds, sl}
 }
 
 func (o *Objects) Set(key, val interface{}) error {
