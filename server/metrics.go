@@ -2,7 +2,7 @@ package server
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/oxfeeefeee/appgo/redis2"
+	"github.com/oxfeeefeee/appgo/redis"
 	"net/http"
 )
 
@@ -15,11 +15,11 @@ const (
 
 type Metrics struct {
 	schema MetricsSchema
-	zsets  *redis2.Zsets
+	zsets  *redis.Zsets
 }
 
 func newMetrics(schema MetricsSchema) *Metrics {
-	zsets := redis2.NewZsets(zsetNamespace)
+	zsets := redis.NewZsets(zsetNamespace, redis.MetricsClient)
 	return &Metrics{
 		schema, zsets,
 	}
@@ -28,10 +28,10 @@ func newMetrics(schema MetricsSchema) *Metrics {
 func (m *Metrics) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	next(rw, r)
 
-	var params []redis2.ZsetIncrbyParams
+	var params []redis.ZsetIncrbyParams
 	keys := m.schema.KeysGen(r)
 	for k, v := range keys {
-		params = append(params, redis2.ZsetIncrbyParams{k, v, 1})
+		params = append(params, redis.ZsetIncrbyParams{k, v, 1})
 	}
 	go func() {
 		err := m.zsets.BatchIncrby(params)

@@ -32,7 +32,7 @@ var Conf struct {
 		MaxConn     int
 		MaxLifetime int
 	}
-	Redis []RedisConf
+	Redis   []RedisConf
 	Negroni struct {
 		Port string
 		GZip bool
@@ -103,6 +103,7 @@ var Conf struct {
 }
 
 type RedisConf struct {
+	Tag         string
 	Host        string
 	Port        string
 	Password    string

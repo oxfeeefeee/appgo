@@ -17,8 +17,8 @@ type Token string
 
 var tokenCache *redis.Hashs
 
-func init() {
-	tokenCache = redis.NewHashs("userToken")
+func InitTokenCache() {
+	tokenCache = redis.NewHashs("userToken", redis.BaseClient)
 }
 
 func GetCacheToken(uid appgo.Id) (string, error) {

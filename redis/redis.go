@@ -8,7 +8,9 @@ import (
 )
 
 var (
-	ErrNotFound = appgo.NewApiErr(appgo.ECodeNotFound, "redis: value not found")
+	BaseClient    *Client
+	MetricsClient *Client
+	ErrNotFound   = appgo.NewApiErr(appgo.ECodeNotFound, "redis: value not found")
 )
 
 type Client struct {
