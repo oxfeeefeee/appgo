@@ -3,6 +3,7 @@ package appgo
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
+	"gitlab.wallstcn.com/wscnbackend/ivankastd"
 	"os"
 	"path/filepath"
 )
@@ -31,13 +32,7 @@ var Conf struct {
 		MaxConn     int
 		MaxLifetime int
 	}
-	Redis struct {
-		Host        string
-		Port        string
-		Password    string
-		MaxIdle     int
-		IdleTimeout int
-	}
+	Redis   []RedisConf
 	Negroni struct {
 		Port string
 		GZip bool
@@ -53,6 +48,7 @@ var Conf struct {
 		AppUser  int
 		WebUser  int
 		WebAdmin int
+		Author   int
 	}
 	Weixin struct {
 		AppId  string
@@ -103,6 +99,16 @@ var Conf struct {
 		Enable bool
 		Port   string
 	}
+	IvankaLog ivankastd.ConfigLog
+}
+
+type RedisConf struct {
+	Tag         string
+	Host        string
+	Port        string
+	Password    string
+	MaxIdle     int
+	IdleTimeout int
 }
 
 func initConfig() {

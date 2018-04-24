@@ -15,6 +15,8 @@ import (
 	"github.com/oxfeeefeee/appgo/services/weixin"
 	"github.com/oxfeeefeee/appgo/toolkit/crypto"
 	"github.com/parnurzeal/gorequest"
+	"strings"
+	"time"
 )
 
 var U *UserSystem
@@ -93,7 +95,33 @@ func Init(db *gorm.DB, settings UserSystemSettings) *UserSystem {
 	return U
 }
 
-func (u *UserSystem) Validate(token auth.Token) bool {
+func (u *UserSystem) Validate(uid appgo.Id, role appgo.Role, token auth.Token, platform string) bool {
+	return true
+	// request with no platform is from pc
+	if len(strings.TrimSpace(platform)) == 0 {
+		return true
+	}
+	if role == appgo.RoleAppUser {
+		// get user's token from cache
+		cacheToken, err := auth.GetCacheToken(uid)
+		cacheToken = strings.TrimSpace(cacheToken)
+		if err != nil {
+			log.Errorf("get user %d token from cache failed, error: %v", uid, err)
+		} else {
+			if cacheToken != "" {
+				return string(token) == cacheToken
+			}
+		}
+
+		// get user's token from db
+		user, err := u.GetUserModel(uid)
+		if err != nil {
+			return false
+		} else {
+			return user.AppToken.String == string(token)
+		}
+	}
+
 	return true //todo
 }
 
@@ -103,10 +131,33 @@ func (u *UserSystem) GetUserModel(id appgo.Id) (*UserModel, error) {
 		log.WithFields(log.Fields{
 			"id":        id,
 			"gormError": err,
-		}).Infoln("failed to find user")
+		}).Infoln("Failed to find user")
 		return nil, appgo.NotFoundErr
 	}
 	return user, nil
+}
+
+func (u *UserSystem) IsBanned(id appgo.Id) bool {
+	user := &UserModel{Id: id}
+	if err := u.db.Select("banned_until").First(user).Error; err != nil {
+		return false
+	} else {
+		return user.BannedUntil != nil
+	}
+}
+
+func (u *UserSystem) RecordLastActiveAt(uid appgo.Id) error {
+	user := &UserModel{Id: uid}
+	return u.db.Model(user).Update("last_active_at", gorm.Expr("now()")).Error
+}
+
+func (u *UserSystem) GetUserMobile(uid appgo.Id) (mobile string, err error) {
+	user := &UserModel{Id: uid}
+	if err := u.db.Select("mobile").First(user).Error; err != nil {
+		return "", err
+	} else {
+		return user.Mobile.String, nil
+	}
 }
 
 func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
@@ -119,7 +170,7 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 		return false, nil, appgo.ForbiddenErr
 	}
 	// TODO save other tokens
-	if newToken != "" && role == appgo.RoleAppUser {
+	if newToken != "" && (role == appgo.RoleAppUser || role == appgo.RoleWebUser) {
 		tk := sql.NullString{string(newToken), true}
 		if err := u.db.Model(user).Updates(&UserModel{AppToken: tk}).Error; err != nil {
 			log.WithFields(log.Fields{
@@ -127,6 +178,13 @@ func (u *UserSystem) CheckIn(id appgo.Id, role appgo.Role,
 				"gormError": err,
 			}).Errorln("failed to save token")
 			return false, nil, appgo.InternalErr
+		}
+
+		if err := auth.SetCacheToken(id, tk.String); err != nil {
+			log.WithFields(log.Fields{
+				"id":        id,
+				"gormError": err,
+			}).Errorln("failed to set cache token")
 		}
 	}
 	// todo stuff about ban
@@ -140,6 +198,7 @@ func (u *UserSystem) UpdatePushInfo(id appgo.Id, pushInfo *appgo.PushInfo) error
 	user := &UserModel{Id: id}
 	var updates UserModel
 	updates.Platform = pushInfo.Platform
+	updates.Manufacturer = sql.NullString{pushInfo.Manufacturer, true}
 	updates.PushProvider = sql.NullString{pushInfo.Provider, true}
 	updates.PushToken = sql.NullString{pushInfo.Token, true}
 	if err := u.db.Model(user).Updates(&updates).Error; err != nil {
@@ -174,6 +233,64 @@ func (u *UserSystem) AddWeixinUser(info *weixin.UserInfo) (appgo.Id, error) {
 		Sex:           sex,
 	}
 	return u.saveUser(user)
+}
+
+func (u *UserSystem) SetWeixinForUser(userId appgo.Id, unionId string) error {
+	user := &UserModel{Id: userId}
+	var updates UserModel
+	updates.WeixinUnionId = sql.NullString{unionId, true}
+	if err := u.db.Model(user).Updates(&updates).Error; err != nil {
+		log.WithFields(log.Fields{
+			"id":        userId,
+			"gormError": err,
+		}).Errorln("failed to update weixin")
+		return appgo.InternalErr
+	}
+	return nil
+}
+
+func (u *UserSystem) EmptyWeixinForUser(userId appgo.Id) error {
+	if err := u.db.Exec("UPDATE user_users SET weixin_union_id = NULL WHERE id = ?", userId).Error; err != nil {
+		log.WithFields(log.Fields{
+			"id":        userId,
+			"gormError": err,
+		}).Errorln("failed to empty weixin")
+		return appgo.InternalErr
+	}
+	return nil
+}
+
+func (u *UserSystem) EmptyAndSetWxForUser(wxuid, uid appgo.Id, wxUnionId string) error {
+	tx := u.db.Begin()
+	// empty weixin unionid of weixin user
+	if err := tx.Exec("UPDATE user_users SET weixin_union_id = NULL WHERE id = ?", wxuid).Error; err != nil {
+		tx.Rollback()
+		log.WithFields(log.Fields{
+			"id":        wxuid,
+			"gormError": err,
+		}).Errorln("failed to empty weixin")
+		return err
+	}
+
+	// set weixin unionid for uid user
+	user := &UserModel{Id: uid}
+	var updates UserModel
+	updates.WeixinUnionId = sql.NullString{wxUnionId, true}
+	if err := tx.Model(user).Updates(&updates).Error; err != nil {
+		tx.Rollback()
+		log.WithFields(log.Fields{
+			"id":        uid,
+			"gormError": err,
+		}).Errorln("failed to update weixin")
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
 }
 
 func (u *UserSystem) GetWeiboUser(openId string) (appgo.Id, error) {
@@ -287,12 +404,25 @@ func (u *UserSystem) GetMobileUser(mobile, password string) (appgo.Id, error) {
 		return 0, db.Error
 	}
 	if len(user.PasswordSalt) == 0 || len(user.PasswordHash) == 0 {
-		return 0, errors.New("password not set yet")
+		return 0, appgo.PasswordNotSetErr
 	}
 	hash := crypto.SaltedHash(user.PasswordSalt, password)
 	if !bytes.Equal(hash[:], user.PasswordHash) {
 		return 0, appgo.InvalidPasswordErr
 	}
+	return user.Id, nil
+}
+
+func (u *UserSystem) GetMobileUserWithOutPwd(mobile string) (appgo.Id, error) {
+	where := &UserModel{Mobile: database.SqlStr(mobile)}
+	var user UserModel
+	if db := u.db.Where(where).First(&user); db.Error != nil {
+		if db.RecordNotFound() {
+			return 0, nil
+		}
+		return 0, db.Error
+	}
+
 	return user.Id, nil
 }
 
@@ -309,6 +439,7 @@ func (u *UserSystem) AddMobileUser(info *auth.MobileUserInfo) (appgo.Id, error) 
 			Nickname:     database.SqlStr(info.Nickname),
 			Portrait:     database.SqlStr(info.Portrait),
 			Sex:          info.Sex,
+			LastActiveAt: time.Now(),
 		}
 		return u.saveUser(user)
 	}

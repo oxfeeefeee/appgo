@@ -12,13 +12,22 @@ const InternalTestToken = "sjadfjlksadfjkljfwoeifshgsdhgsldfjf"
 
 const CustomTokenHeaderName = "X-Appgo-Token"
 
+const CustomWallStTokenHeaderName = "X-Ivanka-Token"
+
+const CustomAuthorTokenHeaderName = "X-Appgo-Author-Token"
+
 const CustomVersionHeaderName = "X-Appgo-Api-Version"
 
 const CustomConfVerHeaderName = "X-Appgo-Conf-Version"
 
+const CustomAppVerHeaderName = "X-Appgo-App-Version"
+
+const CustomPlatformHeaderName = "X-Appgo-Platform"
+
 const (
 	RoleAppUser  Role = 100
 	RoleWebUser       = 101
+	RoleAuthor        = 150
 	RoleWebAdmin      = 200
 )
 
@@ -37,6 +46,7 @@ const (
 	SmsTemplateRegister
 	SmsTemplatePwReset
 	SmsTemplateSetMobile
+	SmsTemplateSMSLogin
 )
 
 type SmsTemplate int
@@ -61,9 +71,10 @@ type MobileMsgSender interface {
 }
 
 type PushInfo struct {
-	Platform Platform
-	Provider string
-	Token    string
+	Platform     Platform
+	Manufacturer string
+	Provider     string
+	Token        string
 }
 
 type PushData struct {

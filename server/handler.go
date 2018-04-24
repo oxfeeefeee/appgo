@@ -14,6 +14,8 @@ import (
 	"github.com/oxfeeefeee/appgo/toolkit/strutil"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/unrolled/render"
+	"gitlab.wallstcn.com/wscnbackend/ivankastd"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
@@ -21,14 +23,17 @@ import (
 )
 
 const (
-	UserIdFieldName      = "UserId__"
-	AdminUserIdFieldName = "AdminUserId__"
-	ResIdFieldName       = "ResourceId__"
-	ContentFieldName     = "Content__"
-	RequestFieldName     = "Request__"
-	ConfVerFieldName     = "ConfVer__"
-
-	maxVersion = 99
+	UserIdFieldName         = "UserId__"
+	AdminUserIdFieldName    = "AdminUserId__"
+	AuthorIdFieldName       = "AuthorId__"
+	ResIdFieldName          = "ResourceId__"
+	ContentFieldName        = "Content__"
+	RequestFieldName        = "Request__"
+	ConfVerFieldName        = "ConfVer__"
+	AppVerFieldName         = "AppVer__"
+	PlatformFieldName       = "Platform__"
+	AdminUserAuthsFieldName = "AdminUserAuths__"
+	maxVersion              = 99
 )
 
 const (
@@ -48,10 +53,13 @@ type HandlerType int
 type httpFunc struct {
 	requireAuth    bool
 	requireAdmin   bool
+	requireAuthor  bool
 	hasResId       bool
 	hasContent     bool
 	hasRequest     bool
 	hasConfVer     bool
+	hasAppVer      bool
+	hasPlatform    bool
 	dummyInput     bool
 	allowAnonymous bool
 	inputType      reflect.Type
@@ -59,14 +67,18 @@ type httpFunc struct {
 	funcValue      reflect.Value
 }
 
+type AdminAuthHandler func(r *http.Request, roleGruop string) (appgo.Id, appgo.Role, []string, error)
+
 type handler struct {
-	htype    HandlerType
-	path     string
-	template string
-	funcs    map[string]*httpFunc
-	supports []string
-	ts       TokenStore
-	renderer *render.Render
+	htype            HandlerType
+	path             string
+	template         string
+	funcs            map[string]*httpFunc
+	methodAuth       map[string]string
+	supports         []string
+	ts               TokenStore
+	renderer         *render.Render
+	adminAuthHandler AdminAuthHandler
 }
 
 func init() {
@@ -91,6 +103,8 @@ func init() {
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer addMetrics(r, time.Now())
+	startTime := time.Now()
+	var userId int64 // for use with log
 
 	method := r.Method
 	ver := apiVersionFromHeader(r)
@@ -130,10 +144,44 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			field.SetInt(int64(user))
+			userId = int64(user)
+			go auth.RecordLastActiveAt(appgo.Id(int64(user)))
 		}
 	} else if f.requireAdmin {
-		user, role := h.authByHeader(r)
+		token := r.Header.Get(appgo.CustomWallStTokenHeaderName)
+		var (
+			user  appgo.Id
+			role  appgo.Role
+			auths []string
+			err   error
+		)
+		if token != "" && h.adminAuthHandler != nil {
+			roleGroup := h.methodAuth[method]
+			user, role, auths, err = h.adminAuthHandler(r, roleGroup)
+			if err != nil {
+				h.renderError(w, appgo.ApiErrFromGoErr(err))
+				return
+			} else {
+				if len(auths) <= 0 {
+					h.renderError(w, appgo.NewApiErr(appgo.ECodeUnauthorized, "not authorized"))
+					return
+				}
+			}
+		} else {
+			user, role = h.authByHeader(r)
+			auths = []string{"xgb_admin"}
+		}
 		s := input.Elem()
+
+		m := make(map[string]bool)
+		userAuthsValue := reflect.ValueOf(m)
+		for _, auth := range auths {
+			userAuthsValue.SetMapIndex(reflect.ValueOf(auth), reflect.ValueOf(true))
+		}
+		fieldName := s.FieldByName(AdminUserAuthsFieldName)
+		if fieldName.IsValid() {
+			fieldName.Set(userAuthsValue)
+		}
 		f := s.FieldByName(AdminUserIdFieldName)
 		if user == 0 || role != appgo.RoleWebAdmin {
 			h.renderError(w, appgo.NewApiErr(
@@ -142,6 +190,24 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		f.SetInt(int64(user))
+		userId = int64(user)
+	}
+	if f.requireAuthor {
+		authorId, expired := h.authorIdFromHeader(r)
+		if authorId == 0 {
+			h.renderError(w, appgo.NewApiErr(
+				appgo.ECodeUnauthorized,
+				"author role required, check if your header has correct author token"))
+			return
+		} else if expired {
+			h.renderError(w, appgo.NewApiErr(
+				appgo.ECodeUnauthorized,
+				"author token expired"))
+			return
+		}
+		s := input.Elem()
+		f := s.FieldByName(AuthorIdFieldName)
+		f.SetInt(int64(authorId))
 	}
 	if f.hasResId {
 		vars := mux.Vars(r)
@@ -177,6 +243,19 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f := s.FieldByName(ConfVerFieldName)
 		f.Set(reflect.ValueOf(ver))
 	}
+	if f.hasAppVer {
+		appVer := appVersionFromHeader(r)
+		s := input.Elem()
+		field := s.FieldByName(AppVerFieldName)
+		field.SetString(appVer)
+	}
+	if f.hasPlatform {
+		platform := platformFromHeader(r)
+		s := input.Elem()
+		field := s.FieldByName(PlatformFieldName)
+		field.SetString(platform)
+	}
+
 	argsIn := []reflect.Value{input}
 	returns := f.funcValue.Call(argsIn)
 	rl := len(returns)
@@ -192,8 +271,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			template := returns[1].Interface().(string)
 			h.renderHtml(w, template, returns[0].Interface())
 		} else if rl == 2 {
+			logUserActivity(r, startTime, userId, int(appgo.ECodeOK), -1)
 			h.renderData(w, returns[0].Interface())
 		} else { // Empty return
+			logUserActivity(r, startTime, userId, int(appgo.ECodeOK), -1)
 			h.renderData(w, map[string]string{})
 		}
 	} else {
@@ -204,6 +285,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, aerr.Msg, http.StatusFound)
 				return
 			}
+			logUserActivity(r, startTime, userId, appgo.ECodeInternal, -1)
 			h.renderError(w, aerr)
 		}
 	}
@@ -231,7 +313,6 @@ func addMetrics(r *http.Request, begin time.Time) {
 	}
 	metrics_query_count["all"].Add(1)
 	metrics_query_count[key].Add(1)
-
 }
 
 func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
@@ -240,10 +321,20 @@ func (h *handler) authByHeader(r *http.Request) (appgo.Id, appgo.Role) {
 	if user == 0 {
 		return 0, 0
 	}
-	if !h.ts.Validate(token) {
+	platform := platformFromHeader(r)
+	if !h.ts.Validate(user, role, token, platform) {
 		return 0, 0
 	}
 	return user, role
+}
+
+func (h *handler) authorIdFromHeader(r *http.Request) (appgo.Id, bool) {
+	token := auth.Token(r.Header.Get(appgo.CustomAuthorTokenHeaderName))
+	if authorId, _, expireAt, err := token.Parse(); err != nil {
+		return 0, false
+	} else {
+		return authorId, expireAt.Before(time.Now())
+	}
 }
 
 func apiVersionFromHeader(r *http.Request) int {
@@ -256,8 +347,16 @@ func confVersionFromHeader(r *http.Request) int64 {
 	return strutil.ToInt64(v)
 }
 
+func appVersionFromHeader(r *http.Request) string {
+	return r.Header.Get(appgo.CustomAppVerHeaderName)
+}
+
+func platformFromHeader(r *http.Request) string {
+	return r.Header.Get(appgo.CustomPlatformHeaderName)
+}
+
 func newHandler(funcSet interface{}, htype HandlerType,
-	ts TokenStore, renderer *render.Render) *handler {
+	ts TokenStore, renderer *render.Render, h AdminAuthHandler) *handler {
 	funcs := make(map[string]*httpFunc)
 	// Let if panic if funSet's type is not right
 	path := ""
@@ -276,10 +375,20 @@ func newHandler(funcSet interface{}, htype HandlerType,
 			template = t
 		}
 	}
+	methods := []string{"GET", "POST", "PUT", "DELETE"}
+
+	methodsAuth := make(map[string]string)
+	if field, ok := t.FieldByName("AUTH"); ok {
+		for _, m := range methods {
+			if auth := field.Tag.Get(strings.ToLower(m)); auth != "" {
+				methodsAuth[m] = auth
+			}
+		}
+	}
+
 	structVal := reflect.Indirect(reflect.ValueOf(funcSet))
 	supports := make([]string, 0, 4)
 	if htype == HandlerTypeJson {
-		methods := []string{"GET", "POST", "PUT", "DELETE"}
 		for _, m := range methods {
 			for i := 1; i <= maxVersion; i++ { //versions
 				if i > 1 {
@@ -307,7 +416,7 @@ func newHandler(funcSet interface{}, htype HandlerType,
 	} else {
 		log.Panicln("Bad handler type")
 	}
-	return &handler{htype, path, template, funcs, supports, ts, renderer}
+	return &handler{htype, path, template, funcs, methodsAuth, supports, ts, renderer, h}
 }
 
 func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
@@ -346,6 +455,22 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 			return nil, errors.New("API func's 2nd parameter needs to be Int64")
 		}
 	}
+
+	if requireAdmin {
+		if fromIdType, ok := inputType.FieldByName(AdminUserAuthsFieldName); ok {
+			if fromIdType.Type.Kind() != reflect.Map {
+				return nil, errors.New("API func's AdminUserAuths__ parameter needs to be map[string]bool")
+			}
+		}
+	}
+
+	requireAuthor := false
+	if fromIdField, ok := inputType.FieldByName(AuthorIdFieldName); ok {
+		requireAuthor = true
+		if fromIdField.Type.Kind() != reflect.Int64 {
+			return nil, errors.New("AuthorId needs to be of type Int64")
+		}
+	}
 	hasResId := false
 	if resIdType, ok := inputType.FieldByName(ResIdFieldName); ok {
 		hasResId = true
@@ -379,7 +504,68 @@ func newHttpFunc(structVal reflect.Value, fieldName string) (*httpFunc, error) {
 			return nil, errors.New("ConfVer needs to be Int64")
 		}
 	}
-	return &httpFunc{requireAuth, requireAdmin,
-		hasResId, hasContent, hasRequest, hasConfVer,
+	hasAppVer := false
+	if appVerType, ok := inputType.FieldByName(AppVerFieldName); ok {
+		hasAppVer = true
+		if appVerType.Type.Kind() != reflect.String {
+			return nil, errors.New("AppVer needs to be string")
+		}
+	}
+	hasPlatform := false
+	if platformType, ok := inputType.FieldByName(PlatformFieldName); ok {
+		hasPlatform = true
+		if platformType.Type.Kind() != reflect.String {
+			return nil, errors.New("Platform needs to be string")
+		}
+	}
+	return &httpFunc{requireAuth, requireAdmin, requireAuthor,
+		hasResId, hasContent, hasRequest, hasConfVer, hasAppVer, hasPlatform,
 		dummyInput, allowAnonymous, inputType, contentType, fieldVal}, nil
+}
+
+func logUserActivity(r *http.Request, startTime time.Time, userId int64, resCode int, bytesOut int) {
+	var remoteIp string
+	remoteIp = r.Header.Get("x-client-ip")
+	if strings.TrimSpace(remoteIp) == "" {
+		remoteIp = r.Header.Get("X-Forwarded-For")
+		if strings.TrimSpace(remoteIp) == "" {
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err == nil {
+				remoteIp = ip
+			}
+		}
+	}
+
+	deviceId := r.Header.Get("X-Device-Id")
+	deviceId = strings.TrimSpace(deviceId)
+	var deviceType string
+	if len(deviceId) > 30 {
+		if strings.HasPrefix(deviceId, "android") {
+			deviceType = "android"
+		} else {
+			deviceType = "ios"
+		}
+	} else {
+		deviceType = "web"
+	}
+
+	ivankastd.LogUserActivity(ivankastd.LogFields{
+		"type":          "webaccess",
+		"remote_ip":     remoteIp,
+		"host":          r.Host,
+		"uri":           r.RequestURI,
+		"method":        r.Method,
+		"path":          r.URL.Path,
+		"route":         "undefined",
+		"referer":       r.Referer(),
+		"user_agent":    r.UserAgent(),
+		"status":        200,
+		"latency":       (time.Now().UnixNano() - startTime.UnixNano()) / 1000000,
+		"bytes_in":      -1,
+		"device_id":     deviceId,
+		"device_type":   deviceType,
+		"bytes_out":     bytesOut,
+		"user_id":       userId,
+		"response_code": resCode,
+	}, "webaccess")
 }

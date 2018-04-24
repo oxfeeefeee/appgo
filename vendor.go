@@ -9,4 +9,5 @@ import (
 	_ "github.com/meatballhat/negroni-logrus"
 	_ "github.com/parnurzeal/gorequest"
 	_ "github.com/rs/cors"
+	_ "gitlab.wallstcn.com/wscnbackend/ivankastd"
 )

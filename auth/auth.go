@@ -24,6 +24,7 @@ var (
 
 type LoginResult struct {
 	UserId   appgo.Id
+	IsNew    bool
 	Token    Token
 	UserInfo interface{}
 	Banned   bool
@@ -34,11 +35,17 @@ type UserSystem interface {
 	// extraInfo should be ban info if banned is true, userInfo otherwise
 	CheckIn(id appgo.Id, role appgo.Role,
 		newToken Token) (banned bool, extraInfo interface{}, err error)
+	IsBanned(id appgo.Id) bool
+	RecordLastActiveAt(uid appgo.Id) error
+	GetUserMobile(uid appgo.Id) (mobile string, err error)
 }
 
 type WeixinSupport interface {
 	GetWeixinUser(unionId string) (uid appgo.Id, err error)
 	AddWeixinUser(info *weixin.UserInfo) (uid appgo.Id, err error)
+	SetWeixinForUser(userId appgo.Id, unionId string) error
+	EmptyWeixinForUser(userId appgo.Id) error
+	EmptyAndSetWxForUser(wxuid, uid appgo.Id, wxUnionId string) error
 }
 
 type WeiboSupport interface {
@@ -123,6 +130,40 @@ func LoginByWeixin(openId, token, code string, role appgo.Role) (*LoginResult, e
 	return checkIn(uid, role)
 }
 
+func LoginByWeixinWeb(wxappInfo *weixin.AppInfo, openId, token, code string, role appgo.Role) (*LoginResult, string, string, error) {
+	if weixinSupport == nil {
+		return nil, "", "", errors.New("weixin login not supported")
+	}
+	if openId == "" || token == "" {
+		params := &weixin.AccessTokenParams{*wxappInfo, code}
+		at := weixin.GetAccessToken(params)
+		if at == nil {
+			return nil, "", "", errors.New("Failed to get access token")
+		}
+		openId, token = at.OpenId, at.AccessToken
+	}
+	winfo := weixin.GetUserInfo(openId, token)
+	if winfo == nil {
+		return nil, "", "", errors.New("Failed to get weixin user info")
+	}
+	if len(winfo.UnionId) == 0 {
+		return nil, "", "", errors.New("Weixin union id is null")
+	}
+	uid, err := weixinSupport.GetWeixinUser(winfo.UnionId)
+	if err != nil {
+		return nil, "", "", err
+	}
+	if uid == 0 {
+		uid, err = weixinSupport.AddWeixinUser(winfo)
+		if err != nil {
+			return nil, "", "", err
+		}
+	}
+
+	loginRes, err := checkIn(uid, role)
+	return loginRes, openId, winfo.Nickname, err
+}
+
 func LoginByWeibo(openId, token, code string, role appgo.Role) (*LoginResult, error) {
 	if weiboSupport == nil {
 		return nil, errors.New("weibo login not supported")
@@ -195,6 +236,14 @@ func LoginByOAuth(code string, index int, role appgo.Role) (*LoginResult, error)
 		}
 	}
 	return checkIn(uid, role)
+}
+
+func LoginById(uid appgo.Id, role appgo.Role) (*LoginResult, error) {
+	return checkIn(uid, role)
+}
+
+func RecordLastActiveAt(uid appgo.Id) error {
+	return userSystem.RecordLastActiveAt(uid)
 }
 
 func checkIn(uid appgo.Id, role appgo.Role) (*LoginResult, error) {

@@ -25,7 +25,7 @@ type Server struct {
 }
 
 type TokenStore interface {
-	Validate(token auth.Token) bool
+	Validate(uid appgo.Id, role appgo.Role, token auth.Token, platform string) bool
 }
 
 type MetricsSchema interface {
@@ -46,14 +46,14 @@ func NewServer(ts TokenStore, middlewares []negroni.Handler,
 	}
 }
 
-func (s *Server) AddRest(path string, rests []interface{}) {
+func (s *Server) AddRest(path string, rests []interface{}, tokenParser AdminAuthHandler) {
 	renderer := render.New(render.Options{
 		Directory:     "N/A",
 		IndentJSON:    appgo.Conf.DevMode,
 		IsDevelopment: appgo.Conf.DevMode,
 	})
 	for _, api := range rests {
-		h := newHandler(api, HandlerTypeJson, s.ts, renderer)
+		h := newHandler(api, HandlerTypeJson, s.ts, renderer, tokenParser)
 		s.Handle(path+h.path, h).Methods(h.supports...)
 	}
 }
@@ -75,7 +75,7 @@ func (s *Server) AddHtml(path, layout string, htmls []interface{}, funcs templat
 		IsDevelopment: appgo.Conf.DevMode,
 	})
 	for _, api := range htmls {
-		h := newHandler(api, HandlerTypeHtml, s.ts, renderer)
+		h := newHandler(api, HandlerTypeHtml, s.ts, renderer, nil)
 		s.Handle(path+h.path, h).Methods("GET")
 	}
 }
@@ -132,12 +132,16 @@ func (s *Server) Serve() {
 
 func GetUserFromToken(r *http.Request) appgo.Id {
 	token := auth.Token(r.Header.Get(appgo.CustomTokenHeaderName))
-	user, _ := token.Validate()
+	user, _, _, _ := token.Parse()
 	return user
 }
 
 func corsOptions() cors.Options {
 	origins := strings.Split(appgo.Conf.Cors.AllowedOrigins, ",")
+	// trim spaces of origin strings
+	for idx, _ := range origins {
+		origins[idx] = strings.TrimSpace(origins[idx])
+	}
 	methods := strings.Split(appgo.Conf.Cors.AllowedMethods, ",")
 	headers := strings.Split(appgo.Conf.Cors.AllowedHeaders, ",")
 	return cors.Options{
